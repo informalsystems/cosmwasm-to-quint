@@ -2,6 +2,8 @@
 
 #![feature(rustc_private)]
 
+pub mod translate;
+
 extern crate itertools;
 extern crate rustc_ast;
 extern crate rustc_driver;
@@ -15,14 +17,14 @@ use std::{borrow::Cow, env, process::Command};
 
 use clap::Parser;
 use itertools::Itertools;
-use rustc_ast::LitKind;
-use rustc_hir::{
-    intravisit::{self, Visitor},
-    TyKind, VariantData,
-};
+use rustc_hir::intravisit::{self, Visitor};
 use rustc_middle::ty::TyCtxt;
 use rustc_plugin::{CrateFilter, RustcPlugin, RustcPluginArgs, Utf8Path};
 use serde::{Deserialize, Serialize};
+
+use crate::translate::{
+    translate_expr, translate_fn_decl, translate_variant_data, try_to_translate_state_var_info,
+};
 
 // This struct is the plugin provided to the rustc_plugin framework,
 // and it must be exported for use by the CLI/driver binaries.
@@ -106,108 +108,6 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
     }
 }
 
-fn segment_to_string(segments: &[rustc_hir::PathSegment]) -> String {
-    let strings = segments.iter().map(|seg| seg.ident.as_str().to_string());
-    let a: Vec<String> = strings.collect_vec();
-    a.join("::")
-
-    // TODO: convert arguments
-    // let method_args = segment.args;
-}
-
-fn translate_variant_data(variant_data: VariantData) -> String {
-    // println!("Found a struct: {variant_data:#?}");
-    let mut fields = variant_data.fields().iter().map(|field| {
-        let field_ident = field.ident.to_string();
-        let field_type = if let TyKind::Path(rustc_hir::QPath::Resolved(_, path)) = field.ty.kind {
-            segment_to_string(path.segments)
-        } else {
-            "".to_string()
-        };
-
-        let ret = format!("{} : {}", field_ident, field_type);
-        ret
-    });
-
-    let ret = format!("{{ {} }}", fields.join(", "));
-    ret
-}
-
-fn translate_lit(lit: &LitKind) -> String {
-    match lit {
-        LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => sym.to_string(),
-        LitKind::Int(i, _) => i.to_string(),
-        _ => "".to_string(),
-    }
-}
-
-fn translate_expr(expr: rustc_hir::Expr) -> String {
-    match expr.kind {
-        rustc_hir::ExprKind::Lit(lit) => translate_lit(&lit.node),
-        rustc_hir::ExprKind::Binary(op, e1, e2) => {
-            let s1 = translate_expr(*e1);
-            let s2 = translate_expr(*e2);
-            let ret = format!("{} {} {}", s1, op.node.as_str(), s2);
-            ret
-        }
-        _ => "".to_string(),
-    }
-}
-
-fn try_to_translate_state_var_info(tcx: TyCtxt, body: rustc_hir::Body) -> String {
-    if let rustc_hir::ExprKind::Call(expr, _) = body.value.kind {
-        if let rustc_hir::ExprKind::Path(rustc_hir::QPath::TypeRelative(ty, segment)) = expr.kind {
-            let _method = segment.ident;
-            let _method_args = segment.args;
-            if let TyKind::Path(rustc_hir::QPath::Resolved(_, path)) = ty.kind {
-                if let rustc_hir::def::Res::Def(_, def_id) = path.res {
-                    let crate_name = tcx.crate_name(def_id.krate);
-                    println!("Crate name: {crate_name:#?}");
-                    // if crate name is `cw_storage_plus`, we need to translate
-                    // this into part of the contract state
-                    // ------------
-
-                    let def_id = expr.hir_id.owner.def_id; // def_id identifies the main function
-                    let ty = tcx.typeck(def_id).node_type(expr.hir_id);
-                    println!("Type: {ty:#?}");
-                    // We need to look into the GenericArgs here (from FnDef)
-                    // to annotate the quint state variable properly
-
-                    // For Map::new, the 2nd and 3rd generics are the map types
-                    // For Item::new, the 2nd generic is the type
-                    // Are there other options?
-                };
-
-                segment_to_string(path.segments)
-            } else {
-                "".to_string()
-            }
-        } else {
-            "".to_string()
-        }
-    } else {
-        "".to_string()
-    }
-}
-
-fn translate_type(ty: rustc_hir::Ty) -> String {
-    match ty.kind {
-        TyKind::Path(rustc_hir::QPath::Resolved(_, path)) => segment_to_string(path.segments),
-        _ => "".to_string(),
-    }
-}
-
-fn translate_fn_decl(decl: rustc_hir::FnDecl) -> String {
-    let inputs = decl.inputs.iter().map(|input| translate_type(*input));
-
-    let output = match decl.output {
-        rustc_hir::FnRetTy::DefaultReturn(_) => "void".to_string(),
-        rustc_hir::FnRetTy::Return(ty) => translate_type(*ty),
-    };
-    let ret = format!("({}): {}", inputs.collect_vec().join(", "), output);
-    ret
-}
-
 fn visit_test(tcx: TyCtxt) -> TyCtxt {
     struct Finder<'tcx> {
         tcx: TyCtxt<'tcx>,
@@ -216,46 +116,59 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
     impl<'tcx> Visitor<'tcx> for Finder<'tcx> {
         fn visit_item(&mut self, item: &'tcx rustc_hir::Item<'tcx>) {
             let name = item.ident;
-            // let msg = format!(
-            //   "There is an item \"{}\" of type \"{}\"",
-            //   item.ident,
-            //   item.kind.descr()
-            // );
-            // println!("{msg}");
+            let should_skip = name.as_str().starts_with('_')
+                || ["", "FIELDS", "VARIANTS"].contains(&name.as_str());
+            // let owner = item.owner_id.def_id.to_def_id().krate;
+            // println!("Item: {name} ({should_skip})");
+            if should_skip {
+                return;
+            }
+            // I want to skip items that I don't care about
 
             match item.kind {
                 rustc_hir::ItemKind::Const(_ty, _generics, body) => {
                     let const_item = self.tcx.hir().body(body);
                     // println!("{const_item:#?}");
                     let ret = try_to_translate_state_var_info(self.tcx, *const_item);
-                    println!("(TODO) state var? {name}: {ret}");
+                    if let Some(ret) = ret {
+                        println!("State var? {name}: {ret}");
+                    };
                     let ret2 = translate_expr(*const_item.value);
-                    println!("Constant {name} = {ret2}")
+                    println!("pure val {name} = {ret2}");
+                    let ret3 = const_item.params;
+                    if !ret3.is_empty() {
+                        println!("{ret3:#?}")
+                    }
                 }
 
                 rustc_hir::ItemKind::Struct(variant_data, _generics) => {
                     // println!("Found a struct: {variant_data:#?}");
                     let fields = translate_variant_data(variant_data);
-                    println!("Struct {name} = {fields}")
-                }
-
-                rustc_hir::ItemKind::TyAlias(ty, _generics) => {
-                    println!("Found a type alias: {ty:#?}");
+                    println!("type {name} = {fields}")
                 }
 
                 rustc_hir::ItemKind::Enum(enum_def, _generics) => {
                     //  println!("Found an enum: {enum_def:#?}");
-                    for variant in enum_def.variants {
-                        let ident = variant.ident;
-                        let fields = translate_variant_data(variant.data);
-                        // TODO multiple variants should be in the same enum
-                        println!("Enum {name} = | {ident}({fields})")
-                    }
+                    let variants = enum_def
+                        .variants
+                        .iter()
+                        .map(|variant| {
+                            let ident = variant.ident;
+                            let fields = translate_variant_data(variant.data);
+                            let ret = format!("  | {ident}({fields})");
+                            ret
+                        })
+                        .collect_vec()
+                        .join("\n");
+                    println!("type {name} =\n{variants}")
                 }
 
-                rustc_hir::ItemKind::Fn(sig, _generics, _bodyy) => {
-                    let ret = translate_fn_decl(*sig.decl);
-                    println!("Fn: {name} with type {ret}")
+                rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
+                    let body = self.tcx.hir().body(body_id);
+                    let ret = translate_fn_decl(*sig.decl, *body);
+                    println!("pure def {name}{ret}");
+                    let body_value = body.value;
+                    println!("{body_value:#?}")
                 }
                 _ => {
                     // let m = format!("other ({})", item.kind.descr());
@@ -277,17 +190,4 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
 // are relevant to whatever task you have.
 fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     visit_test(tcx);
-    // let hir = tcx.hir();
-    // for item_id in hir.items() {
-    //   let item = hir.item(item_id);
-    //   let mut msg = format!(
-    //     "There is an item \"{}\" of type \"{}\"",
-    //     item.ident,
-    //     item.kind.descr()
-    //   );
-    //   if args.caps {
-    //     msg = msg.to_uppercase();
-    //   }
-    //   println!("{msg}");
-    // }
 }
