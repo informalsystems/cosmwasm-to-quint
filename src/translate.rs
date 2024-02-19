@@ -33,30 +33,26 @@ pub fn segment_to_string(segments: &[rustc_hir::PathSegment], sep: &str) -> Stri
 }
 
 pub fn translate_param(param: rustc_hir::Param) -> String {
-    translate_pat(*param.pat)
+    translate_pat(*param.pat).0
 }
 
-pub fn translate_pat(pat: rustc_hir::Pat) -> String {
+pub fn translate_pat(pat: rustc_hir::Pat) -> (String, Vec<String>) {
     match pat.kind {
-        rustc_hir::PatKind::Binding(_a, _id, name, _n) => name.as_str().to_string(),
-        rustc_hir::PatKind::Path(qpath) => translate_qpath(qpath),
+        rustc_hir::PatKind::Binding(_a, _id, name, _n) => (name.as_str().to_string(), vec![]),
+        rustc_hir::PatKind::Path(qpath) => (translate_qpath(qpath), vec![]),
         rustc_hir::PatKind::Struct(qpath, pat_fields, _) => {
             let fields = pat_fields.iter().map(|field| {
                 field.ident.to_string()
                 // TODO: raise error if pat != field (I think this is matching for {field_ident: field_pat})
                 // let field_pat = translate_pat(*field.pat);
             });
-            let ret = format!(
-                "{} {{ {} }}",
-                translate_qpath(qpath),
-                fields.collect_vec().join(", ")
-            );
-            ret
+            let ret = format!("{}(__r)", translate_qpath(qpath),);
+            (ret, fields.collect_vec())
         }
         _ => {
             // let ret = format!("pat<{:#?}>", pat.kind);
             // ret
-            "".to_string()
+            ("".to_string(), vec![])
         }
     }
 }
@@ -92,29 +88,37 @@ pub fn translate_qpath(qpath: rustc_hir::QPath) -> String {
     }
 }
 
-pub fn translate_expr(expr: rustc_hir::Expr) -> String {
+pub fn translate_expr(expr: rustc_hir::Expr, record_fields: &Vec<String>) -> String {
     match expr.kind {
         rustc_hir::ExprKind::Lit(lit) => translate_lit(&lit.node),
         rustc_hir::ExprKind::Binary(op, e1, e2) => {
-            let s1 = translate_expr(*e1);
-            let s2 = translate_expr(*e2);
+            let s1 = translate_expr(*e1, record_fields);
+            let s2 = translate_expr(*e2, record_fields);
             let ret = format!("{} {} {}", s1, op.node.as_str(), s2);
             ret
         }
         rustc_hir::ExprKind::Call(op, args) => {
-            let s1 = translate_expr(*op);
-            let s2 = args.iter().map(|arg| translate_expr(*arg));
+            let s1 = translate_expr(*op, record_fields);
+            let s2 = args.iter().map(|arg| translate_expr(*arg, record_fields));
             let ret = format!("{}({})", s1, s2.collect_vec().join(", "));
             ret
         }
-        rustc_hir::ExprKind::Path(qpath) => translate_qpath(qpath),
-        rustc_hir::ExprKind::AddrOf(_b, _m, expr) => translate_expr(*expr),
+        rustc_hir::ExprKind::Path(qpath) => {
+            let name = translate_qpath(qpath);
+            if record_fields.contains(&name) {
+                let ret = format!("__r.{}", name);
+                ret
+            } else {
+                name
+            }
+        }
+        rustc_hir::ExprKind::AddrOf(_b, _m, expr) => translate_expr(*expr, record_fields),
         rustc_hir::ExprKind::Array(exprs) => {
             let ret = format!(
                 "[{}]",
                 exprs
                     .iter()
-                    .map(|expr| translate_expr(*expr))
+                    .map(|expr| translate_expr(*expr, record_fields))
                     .collect_vec()
                     .join(", ")
             );
@@ -122,7 +126,7 @@ pub fn translate_expr(expr: rustc_hir::Expr) -> String {
         }
         rustc_hir::ExprKind::Block(block, _label) => match block.expr {
             Some(expr) => {
-                let ret = format!("{{ {} }}", translate_expr(*expr));
+                let ret = format!("{{ {} }}", translate_expr(*expr, record_fields));
                 ret
             }
             None => "".to_string(),
@@ -130,11 +134,11 @@ pub fn translate_expr(expr: rustc_hir::Expr) -> String {
         rustc_hir::ExprKind::Match(expr, arm, source) => {
             let ret = format!(
                 "match {} {{\n{}}}",
-                translate_expr(*expr),
+                translate_expr(*expr, record_fields),
                 arm.iter()
                     .map(|arm| {
-                        let pat = translate_pat(*arm.pat);
-                        let expr = translate_expr(*arm.body);
+                        let (pat, fields) = translate_pat(*arm.pat);
+                        let expr = translate_expr(*arm.body, &fields);
                         format!("  | {} => {}", pat, expr)
                     })
                     .collect_vec()

@@ -136,7 +136,7 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
                             self.contract_state.push(format!("{name}: {ret}"));
                         }
                         None => {
-                            let ret2 = translate_expr(*const_item.value);
+                            let ret2 = translate_expr(*const_item.value, &vec![]);
                             println!("pure val {name} = {ret2}");
                             let ret3 = const_item.params;
                             if !ret3.is_empty() {
@@ -174,9 +174,9 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
                 rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
                     let body = self.tcx.hir().body(body_id);
                     let (sig, has_state) = translate_fn_decl(*sig.decl, *body);
-                    let body_value = translate_expr(*body.value);
+                    let body_value = translate_expr(*body.value, &vec![]);
                     if has_state {
-                        println!("pure def {name}{sig} = (contract_state, {body_value})");
+                        println!("pure def {name}{sig} = ({body_value}, contract_state)");
                     } else {
                         println!("pure def {name}{sig} = {body_value}");
                     }
