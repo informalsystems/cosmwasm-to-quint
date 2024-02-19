@@ -12,6 +12,7 @@ extern crate rustc_interface;
 extern crate rustc_middle;
 extern crate rustc_session;
 extern crate rustc_span;
+extern crate rustc_type_ir;
 
 use std::{borrow::Cow, env, process::Command};
 
@@ -111,33 +112,37 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
 fn visit_test(tcx: TyCtxt) -> TyCtxt {
     struct Finder<'tcx> {
         tcx: TyCtxt<'tcx>,
+        contract_state: Vec<String>,
     }
 
     impl<'tcx> Visitor<'tcx> for Finder<'tcx> {
         fn visit_item(&mut self, item: &'tcx rustc_hir::Item<'tcx>) {
             let name = item.ident;
             let should_skip = name.as_str().starts_with('_')
-                || ["", "FIELDS", "VARIANTS"].contains(&name.as_str());
-            // let owner = item.owner_id.def_id.to_def_id().krate;
-            // println!("Item: {name} ({should_skip})");
+                || ["", "FIELDS", "VARIANTS"].contains(&name.as_str())
+                || name.as_str().starts_with("query") // skip query functions for now
+                || name.as_str().starts_with("Query");
             if should_skip {
                 return;
             }
-            // I want to skip items that I don't care about
 
             match item.kind {
                 rustc_hir::ItemKind::Const(_ty, _generics, body) => {
                     let const_item = self.tcx.hir().body(body);
                     // println!("{const_item:#?}");
                     let ret = try_to_translate_state_var_info(self.tcx, *const_item);
-                    if let Some(ret) = ret {
-                        println!("State var? {name}: {ret}");
-                    };
-                    let ret2 = translate_expr(*const_item.value);
-                    println!("pure val {name} = {ret2}");
-                    let ret3 = const_item.params;
-                    if !ret3.is_empty() {
-                        println!("{ret3:#?}")
+                    match ret {
+                        Some(ret) => {
+                            self.contract_state.push(format!("{name}: {ret}"));
+                        }
+                        None => {
+                            let ret2 = translate_expr(*const_item.value);
+                            println!("pure val {name} = {ret2}");
+                            let ret3 = const_item.params;
+                            if !ret3.is_empty() {
+                                println!("{ret3:#?}")
+                            }
+                        }
                     }
                 }
 
@@ -154,8 +159,11 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
                         .iter()
                         .map(|variant| {
                             let ident = variant.ident;
+                            if variant.data.fields().is_empty() {
+                                return format!("  | {name}_{ident}");
+                            }
                             let fields = translate_variant_data(variant.data);
-                            let ret = format!("  | {ident}({fields})");
+                            let ret = format!("  | {name}_{ident}({fields})");
                             ret
                         })
                         .collect_vec()
@@ -165,10 +173,13 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
 
                 rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
                     let body = self.tcx.hir().body(body_id);
-                    let ret = translate_fn_decl(*sig.decl, *body);
-                    println!("pure def {name}{ret}");
-                    let body_value = body.value;
-                    println!("{body_value:#?}")
+                    let (sig, has_state) = translate_fn_decl(*sig.decl, *body);
+                    let body_value = translate_expr(*body.value);
+                    if has_state {
+                        println!("pure def {name}{sig} = (contract_state, {body_value})");
+                    } else {
+                        println!("pure def {name}{sig} = {body_value}");
+                    }
                 }
                 _ => {
                     // let m = format!("other ({})", item.kind.descr());
@@ -180,8 +191,15 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
         }
     }
 
-    let mut finder = Finder { tcx };
+    let mut finder = Finder {
+        tcx,
+        contract_state: vec![],
+    };
     tcx.hir().visit_all_item_likes_in_crate(&mut finder);
+
+    let contract_state = finder.contract_state.join(",\n  ");
+    println!("type ContractState = {{\n  {contract_state}\n}}");
+
     tcx
 }
 
