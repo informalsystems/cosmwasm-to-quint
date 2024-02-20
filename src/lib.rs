@@ -14,7 +14,7 @@ extern crate rustc_session;
 extern crate rustc_span;
 extern crate rustc_type_ir;
 
-use std::{borrow::Cow, env, process::Command};
+use std::{borrow::Cow, collections::HashMap, env, process::Command};
 
 use clap::Parser;
 use itertools::Itertools;
@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::translate::{
     translate_expr, translate_fn_decl, translate_variant_data, try_to_translate_state_var_info,
+    Context,
 };
 
 // This struct is the plugin provided to the rustc_plugin framework,
@@ -112,7 +113,8 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
 fn visit_test(tcx: TyCtxt) -> TyCtxt {
     struct Finder<'tcx> {
         tcx: TyCtxt<'tcx>,
-        contract_state: Vec<String>,
+        contract_state: Vec<(String, String)>,
+        ctx: Context,
     }
 
     impl<'tcx> Visitor<'tcx> for Finder<'tcx> {
@@ -121,7 +123,8 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
             let should_skip = name.as_str().starts_with('_')
                 || ["", "FIELDS", "VARIANTS"].contains(&name.as_str())
                 || name.as_str().starts_with("query") // skip query functions for now
-                || name.as_str().starts_with("Query");
+                || name.as_str().starts_with("Query")
+                || name.as_str().starts_with("get_");
             if should_skip {
                 return;
             }
@@ -133,10 +136,11 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
                     let ret = try_to_translate_state_var_info(self.tcx, *const_item);
                     match ret {
                         Some(ret) => {
-                            self.contract_state.push(format!("{name}: {ret}"));
+                            self.contract_state
+                                .push((name.as_str().to_string().to_lowercase(), ret));
                         }
                         None => {
-                            let ret2 = translate_expr(*const_item.value, &vec![]);
+                            let ret2 = translate_expr(&mut self.ctx, *const_item.value, &vec![]);
                             println!("pure val {name} = {ret2}");
                             let ret3 = const_item.params;
                             if !ret3.is_empty() {
@@ -174,9 +178,24 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
                 rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
                     let body = self.tcx.hir().body(body_id);
                     let (sig, has_state) = translate_fn_decl(*sig.decl, *body);
-                    let body_value = translate_expr(*body.value, &vec![]);
+                    let body_value = translate_expr(&mut self.ctx, *body.value, &vec![]);
                     if has_state {
+                        let message_type =
+                            match self.ctx.message_type_for_action.get(&name.to_string()) {
+                                Some(s) => s.clone(),
+                                None => format!("MessageFor{}", name),
+                            };
                         println!("pure def {name}{sig} = ({body_value}, contract_state)");
+                        println!(
+                            "action {name}_action = {{
+                              // TODO: Change next line according to fund expectations
+                              pure val max_funds = MAX_AMOUNT
+                              // TODO: message args
+                              pure val message = {message_type}
+                              
+                              execute_message(message, max_funds)
+                            }}"
+                        )
                     } else {
                         println!("pure def {name}{sig} = {body_value}");
                     }
@@ -191,14 +210,49 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
         }
     }
 
+    let ctx = Context {
+        message_type_for_action: HashMap::new(),
+    };
+
     let mut finder = Finder {
         tcx,
         contract_state: vec![],
+        ctx,
     };
     tcx.hir().visit_all_item_likes_in_crate(&mut finder);
 
-    let contract_state = finder.contract_state.join(",\n  ");
+    let contract_state = finder
+        .contract_state
+        .iter()
+        .map(|x| format!("{}: {}", x.0, x.1))
+        .collect_vec()
+        .join(",\n  ");
     println!("type ContractState = {{\n  {contract_state}\n}}");
+
+    let init_values_by_type: HashMap<&str, &str> = HashMap::from([
+        ("List", "List()"),
+        ("Map", "Map()"),
+        ("str", "\"\""),
+        ("int", "0"),
+    ]);
+
+    let initializer = "pure val init_contract_state = {\n".to_string()
+        + &finder
+            .contract_state
+            .iter()
+            .map(|field| {
+                format!(
+                    "  {}: {}\n",
+                    field.0,
+                    init_values_by_type
+                        .get(field.1.split('<').next().unwrap())
+                        .unwrap()
+                )
+            })
+            .collect_vec()
+            .join(",\n")
+        + "}";
+    println!("{initializer}");
 
     tcx
 }

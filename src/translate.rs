@@ -88,18 +88,28 @@ pub fn translate_qpath(qpath: rustc_hir::QPath) -> String {
     }
 }
 
-pub fn translate_expr(expr: rustc_hir::Expr, record_fields: &Vec<String>) -> String {
+pub struct Context {
+    pub message_type_for_action: HashMap<String, String>,
+}
+
+pub fn translate_expr(
+    ctx: &mut Context,
+    expr: rustc_hir::Expr,
+    record_fields: &Vec<String>,
+) -> String {
     match expr.kind {
         rustc_hir::ExprKind::Lit(lit) => translate_lit(&lit.node),
         rustc_hir::ExprKind::Binary(op, e1, e2) => {
-            let s1 = translate_expr(*e1, record_fields);
-            let s2 = translate_expr(*e2, record_fields);
+            let s1 = translate_expr(ctx, *e1, record_fields);
+            let s2 = translate_expr(ctx, *e2, record_fields);
             let ret = format!("{} {} {}", s1, op.node.as_str(), s2);
             ret
         }
         rustc_hir::ExprKind::Call(op, args) => {
-            let s1 = translate_expr(*op, record_fields);
-            let s2 = args.iter().map(|arg| translate_expr(*arg, record_fields));
+            let s1 = translate_expr(ctx, *op, record_fields);
+            let s2 = args
+                .iter()
+                .map(|arg| translate_expr(ctx, *arg, record_fields));
             let ret = format!("{}({})", s1, s2.collect_vec().join(", "));
             ret
         }
@@ -112,13 +122,13 @@ pub fn translate_expr(expr: rustc_hir::Expr, record_fields: &Vec<String>) -> Str
                 name
             }
         }
-        rustc_hir::ExprKind::AddrOf(_b, _m, expr) => translate_expr(*expr, record_fields),
+        rustc_hir::ExprKind::AddrOf(_b, _m, expr) => translate_expr(ctx, *expr, record_fields),
         rustc_hir::ExprKind::Array(exprs) => {
             let ret = format!(
                 "[{}]",
                 exprs
                     .iter()
-                    .map(|expr| translate_expr(*expr, record_fields))
+                    .map(|expr| translate_expr(ctx, *expr, record_fields))
                     .collect_vec()
                     .join(", ")
             );
@@ -126,7 +136,7 @@ pub fn translate_expr(expr: rustc_hir::Expr, record_fields: &Vec<String>) -> Str
         }
         rustc_hir::ExprKind::Block(block, _label) => match block.expr {
             Some(expr) => {
-                let ret = format!("{{ {} }}", translate_expr(*expr, record_fields));
+                let ret = format!("{{ {} }}", translate_expr(ctx, *expr, record_fields));
                 ret
             }
             None => "".to_string(),
@@ -134,11 +144,15 @@ pub fn translate_expr(expr: rustc_hir::Expr, record_fields: &Vec<String>) -> Str
         rustc_hir::ExprKind::Match(expr, arm, source) => {
             let ret = format!(
                 "match {} {{\n{}}}",
-                translate_expr(*expr, record_fields),
+                translate_expr(ctx, *expr, record_fields),
                 arm.iter()
                     .map(|arm| {
                         let (pat, fields) = translate_pat(*arm.pat);
-                        let expr = translate_expr(*arm.body, &fields);
+                        let expr = translate_expr(ctx, *arm.body, &fields);
+                        ctx.message_type_for_action.insert(
+                            expr.clone().split('(').next().unwrap().to_string(),
+                            pat.clone(),
+                        );
                         format!("  | {} => {}", pat, expr)
                     })
                     .collect_vec()
