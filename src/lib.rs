@@ -2,7 +2,9 @@
 
 #![feature(rustc_private)]
 
+pub mod boilerplate;
 pub mod translate;
+pub mod visitors;
 
 extern crate itertools;
 extern crate rustc_ast;
@@ -18,15 +20,15 @@ use std::{borrow::Cow, collections::HashMap, env, process::Command};
 
 use clap::Parser;
 use itertools::Itertools;
-use rustc_hir::intravisit::{self, Visitor};
 use rustc_middle::ty::TyCtxt;
 use rustc_plugin::{CrateFilter, RustcPlugin, RustcPluginArgs, Utf8Path};
 use serde::{Deserialize, Serialize};
 
-use crate::translate::{
-    translate_expr, translate_fn_decl, translate_variant_data, try_to_translate_state_var_info,
-    Context,
-};
+use crate::translate::{Constructor, Context};
+
+use crate::visitors::{OpTranslator, TypeTranslator};
+
+use crate::boilerplate::{ACTIONS, CONTRACT_ADDRESS, IMPORTS, INITIALIZERS, VALUES, VARS};
 
 // This struct is the plugin provided to the rustc_plugin framework,
 // and it must be exported for use by the CLI/driver binaries.
@@ -111,123 +113,42 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
 }
 
 fn visit_test(tcx: TyCtxt) -> TyCtxt {
-    struct Finder<'tcx> {
-        tcx: TyCtxt<'tcx>,
-        contract_state: Vec<(String, String)>,
-        ctx: Context,
-    }
-
-    impl<'tcx> Visitor<'tcx> for Finder<'tcx> {
-        fn visit_item(&mut self, item: &'tcx rustc_hir::Item<'tcx>) {
-            let name = item.ident;
-            let should_skip = name.as_str().starts_with('_')
-                || ["", "FIELDS", "VARIANTS"].contains(&name.as_str())
-                || name.as_str().starts_with("query") // skip query functions for now
-                || name.as_str().starts_with("Query")
-                || name.as_str().starts_with("get_");
-            if should_skip {
-                return;
-            }
-
-            match item.kind {
-                rustc_hir::ItemKind::Const(_ty, _generics, body) => {
-                    let const_item = self.tcx.hir().body(body);
-                    // println!("{const_item:#?}");
-                    let ret = try_to_translate_state_var_info(self.tcx, *const_item);
-                    match ret {
-                        Some(ret) => {
-                            self.contract_state
-                                .push((name.as_str().to_string().to_lowercase(), ret));
-                        }
-                        None => {
-                            let ret2 = translate_expr(&mut self.ctx, *const_item.value, &vec![]);
-                            println!("pure val {name} = {ret2}");
-                            let ret3 = const_item.params;
-                            if !ret3.is_empty() {
-                                println!("{ret3:#?}")
-                            }
-                        }
-                    }
-                }
-
-                rustc_hir::ItemKind::Struct(variant_data, _generics) => {
-                    // println!("Found a struct: {variant_data:#?}");
-                    let fields = translate_variant_data(variant_data);
-                    println!("type {name} = {fields}")
-                }
-
-                rustc_hir::ItemKind::Enum(enum_def, _generics) => {
-                    //  println!("Found an enum: {enum_def:#?}");
-                    let variants = enum_def
-                        .variants
-                        .iter()
-                        .map(|variant| {
-                            let ident = variant.ident;
-                            if variant.data.fields().is_empty() {
-                                return format!("  | {name}_{ident}");
-                            }
-                            let fields = translate_variant_data(variant.data);
-                            let ret = format!("  | {name}_{ident}({fields})");
-                            ret
-                        })
-                        .collect_vec()
-                        .join("\n");
-                    println!("type {name} =\n{variants}")
-                }
-
-                rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
-                    let body = self.tcx.hir().body(body_id);
-                    let (sig, has_state) = translate_fn_decl(*sig.decl, *body);
-                    let body_value = translate_expr(&mut self.ctx, *body.value, &vec![]);
-                    if has_state {
-                        let message_type =
-                            match self.ctx.message_type_for_action.get(&name.to_string()) {
-                                Some(s) => s.clone(),
-                                None => format!("MessageFor{}", name),
-                            };
-                        println!("pure def {name}{sig} = ({body_value}, contract_state)");
-                        println!(
-                            "action {name}_action = {{
-                              // TODO: Change next line according to fund expectations
-                              pure val max_funds = MAX_AMOUNT
-                              // TODO: message args
-                              pure val message = {message_type}
-                              
-                              execute_message(message, max_funds)
-                            }}"
-                        )
-                    } else {
-                        println!("pure def {name}{sig} = {body_value}");
-                    }
-                }
-                _ => {
-                    // let m = format!("other ({})", item.kind.descr());
-                    // println!("{m}")
-                }
-            };
-
-            intravisit::walk_item(self, item)
-        }
-    }
-
     let ctx = Context {
-        message_type_for_action: HashMap::new(),
+        message_type_for_action: HashMap::from([(
+            "instantiate".to_string(),
+            "InstantiateMsg".to_string(),
+        )]),
+        constructors: HashMap::from([(
+            "Response_Ok".to_string(),
+            Constructor {
+                name: "Response_Ok".to_string(),
+                fields: vec![],
+            },
+        )]),
     };
 
-    let mut finder = Finder {
+    let mut type_translator = TypeTranslator {
         tcx,
         contract_state: vec![],
         ctx,
     };
-    tcx.hir().visit_all_item_likes_in_crate(&mut finder);
+    tcx.hir()
+        .visit_all_item_likes_in_crate(&mut type_translator);
 
-    let contract_state = finder
+    let contract_state = type_translator
         .contract_state
         .iter()
         .map(|x| format!("{}: {}", x.0, x.1))
         .collect_vec()
         .join(",\n  ");
     println!("type ContractState = {{\n  {contract_state}\n}}");
+
+    let mut op_translator = OpTranslator {
+        tcx,
+        ctx: type_translator.ctx,
+        contract_state: type_translator.contract_state,
+    };
+    tcx.hir().visit_all_item_likes_in_crate(&mut op_translator);
 
     let init_values_by_type: HashMap<&str, &str> = HashMap::from([
         ("List", "List()"),
@@ -237,7 +158,7 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
     ]);
 
     let initializer = "pure val init_contract_state = {\n".to_string()
-        + &finder
+        + &op_translator
             .contract_state
             .iter()
             .map(|field| {
@@ -261,5 +182,13 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
 // I recommend reading the Rustc Development Guide to better understand which compiler APIs
 // are relevant to whatever task you have.
 fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
+    println!("module generated {{");
+    print!("{IMPORTS}");
+    print!("{VARS}");
+    print!("{CONTRACT_ADDRESS}");
+    print!("{VALUES}");
+    print!("{INITIALIZERS}");
+    print!("{ACTIONS}");
     visit_test(tcx);
+    println!("}}");
 }

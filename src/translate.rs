@@ -15,6 +15,8 @@ pub fn segment_to_string(segments: &[rustc_hir::PathSegment], sep: &str) -> Stri
         ("Uint128", "int"),
         ("u128", "int"),
         ("Timestamp", "int"),
+        ("DepsMut", "Deps"),
+        ("Ok", "Response_Ok"),
     ]);
 
     let strings = segments.iter().map(|seg| {
@@ -57,17 +59,39 @@ pub fn translate_pat(pat: rustc_hir::Pat) -> (String, Vec<String>) {
     }
 }
 
-pub fn translate_variant_data(variant_data: VariantData) -> String {
-    // println!("Found a struct: {variant_data:#?}");
-    let mut fields = variant_data.fields().iter().map(|field| {
-        let field_ident = field.ident.to_string();
-        let field_type = translate_type(*field.ty);
-        let ret = format!("{}: {}", field_ident, field_type);
-        ret
-    });
+// pub fn nondet_value_for_type(ty: String) -> String {
+//     let nondet_value_for_type = HashMap::from([
+//         ("str", "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string()),
+//         ("int", "0.to(MAX_AMOUNT).oneOf()".to_string()),
+//         // TODO list -> possibilities
+//         // TODO turn this into a recursive function for structs
+//     ]);
+//     *nondet_value_for_type.get(&ty).unwrap()
+// }
 
-    let ret = format!("{{ {} }}", fields.join(", "));
-    ret
+pub fn translate_variant_data(variant_data: VariantData) -> Vec<Field> {
+    let nondet_value_for_type = HashMap::from([
+        ("str", "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string()),
+        ("int", "0.to(MAX_AMOUNT).oneOf()".to_string()),
+        // TODO list -> possibilities
+    ]);
+    // println!("Found a struct: {variant_data:#?}");
+    variant_data
+        .fields()
+        .iter()
+        .map(|field| {
+            let field_ident = field.ident.to_string();
+            let field_type = translate_type(*field.ty);
+            Field {
+                name: field_ident,
+                ty: field_type.clone(),
+                nondet_value: nondet_value_for_type
+                    .get(&field_type.clone().as_str())
+                    .map(|x| x.to_string())
+                    .unwrap_or(format!("nondet_value_for_type({})", field_type)),
+            }
+        })
+        .collect_vec()
 }
 
 pub fn translate_lit(lit: &LitKind) -> String {
@@ -84,12 +108,32 @@ pub fn translate_lit(lit: &LitKind) -> String {
 pub fn translate_qpath(qpath: rustc_hir::QPath) -> String {
     match qpath {
         rustc_hir::QPath::Resolved(_, path) => segment_to_string(path.segments, "_"),
+        rustc_hir::QPath::TypeRelative(ty, segment) => {
+            let ty = translate_type(*ty);
+            let segment = segment.ident.to_string();
+            format!("{}_{}", ty, segment)
+        }
         _ => "".to_string(),
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct Field {
+    pub name: String,
+    pub ty: String,
+    pub nondet_value: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct Constructor {
+    pub name: String,
+    pub fields: Vec<Field>,
+}
+
+#[derive(Clone, Debug)]
 pub struct Context {
     pub message_type_for_action: HashMap<String, String>,
+    pub constructors: HashMap<String, Constructor>,
 }
 
 pub fn translate_expr(
@@ -109,8 +153,13 @@ pub fn translate_expr(
             let s1 = translate_expr(ctx, *op, record_fields);
             let s2 = args
                 .iter()
-                .map(|arg| translate_expr(ctx, *arg, record_fields));
-            let ret = format!("{}({})", s1, s2.collect_vec().join(", "));
+                .map(|arg| translate_expr(ctx, *arg, record_fields))
+                .collect_vec();
+            if s2.is_empty() {
+                // Quint doesn't have nullary operators
+                return s1;
+            }
+            let ret = format!("{}({})", s1, s2.join(", "));
             ret
         }
         rustc_hir::ExprKind::Path(qpath) => {
@@ -141,7 +190,7 @@ pub fn translate_expr(
             }
             None => "".to_string(),
         },
-        rustc_hir::ExprKind::Match(expr, arm, source) => {
+        rustc_hir::ExprKind::Match(expr, arm, _source) => {
             let ret = format!(
                 "match {} {{\n{}}}",
                 translate_expr(ctx, *expr, record_fields),
@@ -151,7 +200,7 @@ pub fn translate_expr(
                         let expr = translate_expr(ctx, *arm.body, &fields);
                         ctx.message_type_for_action.insert(
                             expr.clone().split('(').next().unwrap().to_string(),
-                            pat.clone(),
+                            pat.clone().split('(').next().unwrap().to_string(),
                         );
                         format!("  | {} => {}", pat, expr)
                     })
@@ -160,11 +209,11 @@ pub fn translate_expr(
             );
             ret
         }
-
+        rustc_hir::ExprKind::MethodCall(_, expr, _, _) => translate_expr(ctx, *expr, record_fields),
         _ => {
-            // let ret = format!("<{:?}>", expr.kind);
-            // ret
-            "".to_string()
+            let ret = format!("<{:#?}>", expr.kind);
+            ret
+            // "".to_string()
         }
     }
 }
@@ -256,6 +305,39 @@ pub fn translate_type(ty: rustc_hir::Ty) -> String {
     }
 }
 
+pub fn format_fields(fields: Vec<Field>) -> String {
+    fields
+        .iter()
+        .map(|x| format!("{}: {}", x.name, x.ty))
+        .collect_vec()
+        .join(", ")
+}
+
+pub fn translate_enum(ctx: &mut Context, name: String, enum_def: rustc_hir::EnumDef) -> String {
+    enum_def
+        .variants
+        .iter()
+        .map(|variant| {
+            let ident = variant.ident;
+            let qualified_ident = format!("{name}_{ident}");
+            if variant.data.fields().is_empty() {
+                return format!("  | {qualified_ident}");
+            }
+            let fields = translate_variant_data(variant.data);
+            ctx.constructors.insert(
+                qualified_ident.clone(),
+                Constructor {
+                    name: qualified_ident.clone(),
+                    fields: fields.clone(),
+                },
+            );
+            let ret = format!("  | {qualified_ident}({{ {} }})", format_fields(fields));
+            ret
+        })
+        .collect_vec()
+        .join("\n")
+}
+
 pub fn translate_fn_decl(decl: rustc_hir::FnDecl, body: rustc_hir::Body) -> (String, bool) {
     let param_tuples = zip(decl.inputs, body.params);
     let inputs = param_tuples.map(|(input, param)| {
@@ -275,7 +357,7 @@ pub fn translate_fn_decl(decl: rustc_hir::FnDecl, body: rustc_hir::Body) -> (Str
     // If one of the params is of type Deps or DepsMut, and the return type is "Result", this is a state transformer,
     // and therefore should take the state as an argument and return it
     if input.contains("Deps") && output.contains("Result") {
-        let ret = format!("(contract_state: ContractState, {input}): ({output}, ContractState)");
+        let ret = format!("(state: ContractState, {input}): ({output}, ContractState)");
         return (ret, true);
     }
 
