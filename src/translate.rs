@@ -134,6 +134,7 @@ pub struct Constructor {
 pub struct Context {
     pub message_type_for_action: HashMap<String, String>,
     pub constructors: HashMap<String, Constructor>,
+    pub stateful_ops: Vec<String>,
 }
 
 pub fn translate_expr(
@@ -155,6 +156,10 @@ pub fn translate_expr(
                 .iter()
                 .map(|arg| translate_expr(ctx, *arg, record_fields))
                 .collect_vec();
+            if ctx.stateful_ops.contains(&s1) {
+                // If this is a stateful operation, we need to add the state as the first argument
+                return format!("{}(state, {})", s1, s2.join(", "));
+            }
             if s2.is_empty() {
                 // Quint doesn't have nullary operators
                 return s1;

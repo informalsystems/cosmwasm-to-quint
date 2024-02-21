@@ -135,6 +135,7 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
                 fields: vec![],
             },
         )]),
+        stateful_ops: vec![],
     };
 
     let mut type_translator = TypeTranslator {

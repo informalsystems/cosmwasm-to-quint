@@ -48,6 +48,14 @@ impl<'tcx> Visitor<'tcx> for TypeTranslator<'tcx> {
                 let variants = translate_enum(&mut self.ctx, name.as_str().to_string(), enum_def);
                 println!("type {name} =\n{variants}")
             }
+            rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
+                let body = self.tcx.hir().body(body_id);
+                let (_sig, has_state) = translate_fn_decl(*sig.decl, *body);
+                if has_state {
+                    self.ctx.stateful_ops.push(name.as_str().to_string())
+                }
+            }
+
             _ => {}
         };
 
