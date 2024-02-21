@@ -277,10 +277,8 @@ pub fn try_to_translate_state_var_info(tcx: TyCtxt, body: rustc_hir::Body) -> Op
                         // Are there other options?
                         let translated_type =
                             if (path.segments[0].ident.as_str().starts_with("Map")) {
-                                let ret = format!(
-                                    "Map<{}, {}>",
-                                    translated_types[1], translated_types[2]
-                                );
+                                let ret =
+                                    format!("{} -> {}", translated_types[1], translated_types[2]);
                                 ret.to_string()
                             } else {
                                 translated_types[1].clone()

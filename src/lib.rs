@@ -112,6 +112,16 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
     }
 }
 
+fn init_value_for_type(ty: String) -> String {
+    let map_parts = ty.split("->").collect_vec();
+    if map_parts.len() > 1 {
+        return format!("Map()");
+    }
+    let init_values_by_type: HashMap<&str, &str> =
+        HashMap::from([("List", "List()"), ("str", "\"\""), ("int", "0")]);
+    init_values_by_type.get(ty.as_str()).unwrap().to_string()
+}
+
 fn visit_test(tcx: TyCtxt) -> TyCtxt {
     let ctx = Context {
         message_type_for_action: HashMap::from([(
@@ -135,7 +145,13 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
     tcx.hir()
         .visit_all_item_likes_in_crate(&mut type_translator);
 
-    let contract_state = type_translator
+    let mut op_translator = OpTranslator {
+        tcx,
+        ctx: type_translator.ctx,
+        contract_state: type_translator.contract_state,
+    };
+    tcx.hir().visit_all_item_likes_in_crate(&mut op_translator);
+    let contract_state = op_translator
         .contract_state
         .iter()
         .map(|x| format!("{}: {}", x.0, x.1))
@@ -143,33 +159,11 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
         .join(",\n  ");
     println!("type ContractState = {{\n  {contract_state}\n}}");
 
-    let mut op_translator = OpTranslator {
-        tcx,
-        ctx: type_translator.ctx,
-        contract_state: type_translator.contract_state,
-    };
-    tcx.hir().visit_all_item_likes_in_crate(&mut op_translator);
-
-    let init_values_by_type: HashMap<&str, &str> = HashMap::from([
-        ("List", "List()"),
-        ("Map", "Map()"),
-        ("str", "\"\""),
-        ("int", "0"),
-    ]);
-
     let initializer = "pure val init_contract_state = {\n".to_string()
         + &op_translator
             .contract_state
             .iter()
-            .map(|field| {
-                format!(
-                    "  {}: {}\n",
-                    field.0,
-                    init_values_by_type
-                        .get(field.1.split('<').next().unwrap())
-                        .unwrap()
-                )
-            })
+            .map(|field| format!("  {}: {}\n", field.0, init_value_for_type(field.1.clone())))
             .collect_vec()
             .join(",\n")
         + "}";

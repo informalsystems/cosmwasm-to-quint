@@ -46,7 +46,7 @@ pub const ACTIONS: &str = "
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    val r = execute(deps_val, env_val, info, message)
+    val r = execute(contract_state, deps_val, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
       return' = r._1,
