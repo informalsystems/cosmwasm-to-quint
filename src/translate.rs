@@ -3,9 +3,13 @@ use std::{collections::HashMap, fmt::Debug};
 use itertools::Itertools;
 use rustc_ast::LitKind;
 use rustc_hir::{TyKind, VariantData};
-use rustc_middle::ty::TyCtxt;
-use rustc_span::{symbol::Ident, Symbol};
+use rustc_span::symbol::Ident;
 use std::iter::zip;
+
+use crate::{
+    state_extraction::try_to_translate_state_var_info,
+    types::{Constructor, Context, Field},
+};
 
 pub trait Translatable {
     fn translate(&self, ctx: &mut Context) -> String;
@@ -224,35 +228,6 @@ impl Translatable for rustc_hir::GenericArg<'_> {
     }
 }
 
-impl Translatable for rustc_middle::ty::Ty<'_> {
-    fn translate(&self, ctx: &mut Context) -> String {
-        // FIXME: This should be quite unstable, but I couldn't figure out how to navigate `ty` here
-        let var_name = &format!("{:#?}", self);
-        let name = var_name
-            .split("::")
-            .last()
-            .unwrap()
-            .split(' ')
-            .last()
-            .unwrap()
-            .split(')')
-            .next()
-            .unwrap();
-
-        Ident::with_dummy_span(Symbol::intern(name)).translate(ctx)
-    }
-}
-impl Translatable for rustc_middle::ty::GenericArg<'_> {
-    fn translate(&self, ctx: &mut Context) -> String {
-        let kind = self.unpack();
-        match kind {
-            rustc_middle::ty::GenericArgKind::Type(ty) => ty.translate(ctx),
-            rustc_middle::ty::GenericArgKind::Const(_) => "".to_string(),
-            rustc_middle::ty::GenericArgKind::Lifetime(_) => "".to_string(),
-        }
-    }
-}
-
 fn get_pat_fields(pat: rustc_hir::Pat) -> Vec<String> {
     match pat.kind {
         // TODO: raise error if pat != field (I think this is matching for {field_ident: field_pat})
@@ -287,8 +262,9 @@ pub fn nondet_value_for_type(ident: String, ty: String) -> String {
         );
     }
     format!(
-        "nondet {}: {}",
+        "nondet {}: {} = {}",
         ident,
+        ty,
         nondet_values_by_type
             .get(ty.as_str())
             .unwrap_or(&format!("nondet_value_for_type({ty})"))
@@ -309,79 +285,6 @@ pub fn get_variant_fields(ctx: &mut Context, variant_data: VariantData) -> Vec<F
             }
         })
         .collect_vec()
-}
-
-#[derive(Clone, Debug)]
-pub struct Field {
-    pub name: String,
-    pub ty: String,
-    pub nondet_value: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct Constructor {
-    pub name: String,
-    pub fields: Vec<Field>,
-}
-
-#[derive(Clone)]
-pub struct Context<'tcx> {
-    pub message_type_for_action: HashMap<String, String>,
-    pub constructors: HashMap<String, Constructor>,
-    pub stateful_ops: Vec<String>,
-    pub structs: HashMap<String, Vec<Field>>,
-    pub record_fields: Vec<String>,
-    pub current_item_name: String,
-    pub tcx: TyCtxt<'tcx>,
-    pub contract_state: Vec<(String, String)>,
-}
-
-pub fn try_to_translate_state_var_info(ctx: &mut Context, body: rustc_hir::Body) -> Option<String> {
-    if let rustc_hir::ExprKind::Call(expr, _) = body.value.kind {
-        if let rustc_hir::ExprKind::Path(rustc_hir::QPath::TypeRelative(ty, _segment)) = expr.kind {
-            // let method = segment.ident;
-            // let method_args = segment.args;
-            // println!("Method: {method} ({method_args:#?})");
-            if let TyKind::Path(rustc_hir::QPath::Resolved(_, path)) = ty.kind {
-                if let rustc_hir::def::Res::Def(_kind, def_id) = path.res {
-                    let crate_name = ctx.tcx.crate_name(def_id.krate);
-                    if crate_name.as_str() != "cw_storage_plus" {
-                        return None;
-                    }
-
-                    // if crate name is `cw_storage_plus`, we need to translate
-                    // this into part of the contract state
-                    // ------------
-
-                    let def_id = expr.hir_id.owner.def_id; // def_id identifies the main function
-
-                    let ty = ctx.tcx.typeck(def_id).node_type(expr.hir_id);
-                    if let rustc_type_ir::TyKind::FnDef(_ty_def_id, generic_args) = ty.kind() {
-                        // We need to look into the GenericArgs here (from FnDef)
-                        // to annotate the quint state variable properly
-
-                        let translated_types =
-                            generic_args.iter().map(|t| t.translate(ctx)).collect_vec();
-                        // segment_to_string(path.segments);
-
-                        // For Map::new, the 2nd and 3rd generics are the map types
-                        // For Item::new, the 2nd generic is the type
-                        // Are there other options?
-                        let translated_type = if path.segments[0].ident.as_str().starts_with("Map")
-                        {
-                            let ret = format!("{} -> {}", translated_types[1], translated_types[2]);
-                            ret.to_string()
-                        } else {
-                            translated_types[1].clone()
-                        };
-
-                        return Some(translated_type);
-                    }
-                };
-            }
-        }
-    }
-    None
 }
 
 pub fn format_fields(fields: Vec<Field>) -> String {

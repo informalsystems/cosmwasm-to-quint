@@ -3,7 +3,9 @@
 #![feature(rustc_private)]
 
 pub mod boilerplate;
+pub mod state_extraction;
 pub mod translate;
+pub mod types;
 
 extern crate itertools;
 extern crate rustc_ast;
@@ -24,7 +26,7 @@ use rustc_plugin::{CrateFilter, RustcPlugin, RustcPluginArgs, Utf8Path};
 use serde::{Deserialize, Serialize};
 use translate::Translatable;
 
-use crate::translate::{Constructor, Context};
+use crate::types::{Constructor, Context};
 
 use crate::boilerplate::{ACTIONS, CONTRACT_ADDRESS, IMPORTS, INITIALIZERS, VALUES, VARS};
 
