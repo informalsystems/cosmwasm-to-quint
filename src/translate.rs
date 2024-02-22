@@ -140,6 +140,9 @@ impl Translatable for rustc_hir::Expr<'_> {
             }
             rustc_hir::ExprKind::Call(op, args) => {
                 let operator = op.translate(ctx);
+                if operator == "int_new" {
+                    return args[0].translate(ctx);
+                }
                 let arguments = translate_list(args, ctx, ", ");
                 if ctx.stateful_ops.contains(&operator) {
                     // If this is a stateful operation, we need to add the state as the first argument
@@ -262,12 +265,37 @@ fn get_pat_fields(pat: rustc_hir::Pat) -> Vec<String> {
     }
 }
 
-pub fn get_variant_fields(ctx: &mut Context, variant_data: VariantData) -> Vec<Field> {
-    let nondet_value_for_type = HashMap::from([
+pub fn nondet_value_for_type(ident: String, ty: String) -> String {
+    let nondet_values_by_type = HashMap::from([
         ("str", "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string()),
         ("int", "0.to(MAX_AMOUNT).oneOf()".to_string()),
-        // TODO list -> possibilities
+        // TODO list for other types
     ]);
+    if ty == "List[int]" {
+        // FIXME make this work with all types
+        return format!(
+            "
+    val possibilities = 1.to(10).map(i => SomeInt(i)).union(Set(NoneInt))
+    nondet v1 = possibilities.oneOf()
+    nondet v2 = possibilities.oneOf()
+    nondet v3 = possibilities.oneOf()
+    val {ident}: {ty} = [v1, v2, v3].foldl([], (acc, v) => match v {{
+      | SomeInt(i) => acc.append(i)
+      | NoneInt => acc
+    }})
+"
+        );
+    }
+    format!(
+        "nondet {}: {}",
+        ident,
+        nondet_values_by_type
+            .get(ty.as_str())
+            .unwrap_or(&format!("nondet_value_for_type({ty})"))
+    )
+}
+
+pub fn get_variant_fields(ctx: &mut Context, variant_data: VariantData) -> Vec<Field> {
     variant_data
         .fields()
         .iter()
@@ -275,12 +303,9 @@ pub fn get_variant_fields(ctx: &mut Context, variant_data: VariantData) -> Vec<F
             let field_ident = field.ident.to_string();
             let field_type = field.ty.translate(ctx);
             Field {
-                name: field_ident,
+                name: field_ident.clone(),
                 ty: field_type.clone(),
-                nondet_value: nondet_value_for_type
-                    .get(&field_type.clone().as_str())
-                    .map(|x| x.to_string())
-                    .unwrap_or(format!("nondet_value_for_type({})", field_type)),
+                nondet_value: nondet_value_for_type(field_ident.clone(), field_type),
             }
         })
         .collect_vec()
@@ -488,12 +513,7 @@ impl Translatable for rustc_hir::Item<'_> {
                         };
                     let values_for_fields = fields
                         .iter()
-                        .map(|field| {
-                            format!(
-                                "nondet {}: {} = {}",
-                                field.name, field.ty, field.nondet_value
-                            )
-                        })
+                        .map(|field| field.nondet_value.clone())
                         .collect_vec()
                         .join("\n  ");
                     let field_params = fields
