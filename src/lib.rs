@@ -165,6 +165,8 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
         )]),
         structs: HashMap::new(),
         stateful_ops: vec![],
+        record_fields: vec![],
+        current_item_name: "".to_string(),
     };
 
     let mut type_translator = TypeTranslator {

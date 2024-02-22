@@ -4,8 +4,8 @@ use rustc_middle::ty::TyCtxt;
 use rustc_span::sym::unwrap_or;
 
 use crate::translate::{
-    format_fields, translate_enum, translate_expr, translate_fn_decl, translate_variant_data,
-    try_to_translate_state_var_info, Context,
+    format_fields, get_variant_fields, translate_fn_decl, translate_list,
+    try_to_translate_state_var_info, Context, Translatable,
 };
 
 pub struct TypeTranslator<'tcx> {
@@ -35,11 +35,11 @@ impl<'tcx> Visitor<'tcx> for TypeTranslator<'tcx> {
         if should_skip(name.as_str()) {
             return;
         }
+        self.ctx.current_item_name = name.as_str().to_string();
 
         match item.kind {
             rustc_hir::ItemKind::Struct(variant_data, _generics) => {
-                // println!("Found a struct: {variant_data:#?}");
-                let fields = translate_variant_data(variant_data);
+                let fields = get_variant_fields(&mut self.ctx, variant_data);
                 self.ctx
                     .structs
                     .insert(name.as_str().to_string(), fields.clone());
@@ -48,13 +48,11 @@ impl<'tcx> Visitor<'tcx> for TypeTranslator<'tcx> {
             }
 
             rustc_hir::ItemKind::Enum(enum_def, _generics) => {
-                //  println!("Found an enum: {enum_def:#?}");
-                let variants = translate_enum(&mut self.ctx, name.as_str().to_string(), enum_def);
-                println!("type {name} =\n{variants}")
+                println!("type {name} =\n{}", enum_def.translate(&mut self.ctx));
             }
             rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
                 let body = self.tcx.hir().body(body_id);
-                let (_sig, has_state) = translate_fn_decl(*sig.decl, *body);
+                let (_sig, has_state) = translate_fn_decl(&mut self.ctx, *sig.decl, *body);
                 if has_state {
                     self.ctx.stateful_ops.push(name.as_str().to_string())
                 }
@@ -72,23 +70,25 @@ impl<'tcx> Visitor<'tcx> for OpTranslator<'tcx> {
         if should_skip(name.as_str()) {
             return;
         }
+        self.ctx.current_item_name = name.as_str().to_string();
 
         match item.kind {
             rustc_hir::ItemKind::Const(_ty, _generics, body) => {
                 let const_item = self.tcx.hir().body(body);
                 // println!("{const_item:#?}");
-                let ret = try_to_translate_state_var_info(self.tcx, *const_item);
+                let ret = try_to_translate_state_var_info(&mut self.ctx, self.tcx, *const_item);
                 match ret {
                     Some(ret) => {
                         self.contract_state
                             .push((name.as_str().to_string().to_lowercase(), ret));
                     }
                     None => {
-                        let ret2 = translate_expr(&mut self.ctx, *const_item.value, &vec![]);
-                        println!("pure val {name} = {ret2}");
-                        let ret3 = const_item.params;
-                        if !ret3.is_empty() {
-                            println!("{ret3:#?}")
+                        println!(
+                            "pure val {name} = {}",
+                            const_item.value.translate(&mut self.ctx)
+                        );
+                        if !const_item.params.is_empty() {
+                            println!("{}", translate_list(const_item.params, &mut self.ctx, ", "))
                         }
                     }
                 }
@@ -96,8 +96,8 @@ impl<'tcx> Visitor<'tcx> for OpTranslator<'tcx> {
 
             rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
                 let body = self.tcx.hir().body(body_id);
-                let (sig, has_state) = translate_fn_decl(*sig.decl, *body);
-                let body_value = translate_expr(&mut self.ctx, *body.value, &vec![]);
+                let (sig, has_state) = translate_fn_decl(&mut self.ctx, *sig.decl, *body);
+                let body_value = body.value.translate(&mut self.ctx);
                 let empty_vec = vec![];
                 // FIXME: We need to do something about instantiate
                 if has_state && name.as_str() != "execute" && name.as_str() != "instantiate" {

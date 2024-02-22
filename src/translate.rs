@@ -6,86 +6,256 @@ use rustc_hir::{TyKind, VariantData};
 use rustc_middle::ty::TyCtxt;
 use std::iter::zip;
 
-pub fn segment_to_string(segments: &[rustc_hir::PathSegment], sep: &str) -> String {
-    let translated_segments: HashMap<&str, &str> = HashMap::from([
-        ("Vec", "List"),
-        ("String", "str"),
-        ("Uint128", "int"),
-        ("Uint64", "int"),
-        ("u128", "int"),
-        ("u64", "int"),
-        ("Timestamp", "int"),
-        ("DepsMut", "Deps"),
-        ("Ok", "Response_Ok"),
-    ]);
+pub trait Translatable {
+    fn translate(&self, ctx: &mut Context) -> String;
+}
 
-    let strings = segments.iter().map(|seg| {
-        let s = seg.ident.as_str();
+pub fn translate_list<T: Translatable>(items: &[T], ctx: &mut Context, sep: &str) -> String {
+    items
+        .iter()
+        .map(|x| x.translate(ctx))
+        .collect_vec()
+        .join(sep)
+}
+
+impl Translatable for rustc_hir::PathSegment<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let translated_segments: HashMap<&str, &str> = HashMap::from([
+            ("Vec", "List"),
+            ("String", "str"),
+            ("Uint128", "int"),
+            ("Uint64", "int"),
+            ("u128", "int"),
+            ("u64", "int"),
+            ("Timestamp", "int"),
+            ("DepsMut", "Deps"),
+            ("Ok", "Response_Ok"),
+        ]);
+
+        let s = self.ident.as_str();
         let translated = translated_segments.get(s);
         match translated {
-            Some(t) => match seg.args {
+            Some(t) => match self.args {
                 Some(args) => {
-                    let translated_args = args
-                        .args
-                        .iter()
-                        .map(|arg| translate_generic_arg(*arg))
-                        .collect_vec();
+                    let translated_args = translate_list(args.args, ctx, ", ");
 
-                    if translated_args.join(", ") == "" {
+                    if translated_args == *"" {
                         return t.to_string();
                     }
-                    format!("{}[{}]", t, translated_args.join(", "))
+
+                    format!("{}[{}]", t, translated_args)
                 }
                 None => t.to_string(),
             },
             None => s.to_string(),
         }
-    });
-    let a: Vec<String> = strings.collect_vec();
-    a.join(sep)
-
-    // TODO: convert arguments
-    // let method_args = segment.args;
+    }
 }
 
-pub fn translate_param(param: rustc_hir::Param) -> String {
-    translate_pat(*param.pat).0
-}
-
-pub fn translate_pat(pat: rustc_hir::Pat) -> (String, Vec<String>) {
-    match pat.kind {
-        rustc_hir::PatKind::Binding(_a, _id, name, _n) => (name.as_str().to_string(), vec![]),
-        rustc_hir::PatKind::Path(qpath) => (translate_qpath(qpath), vec![]),
-        rustc_hir::PatKind::Struct(qpath, pat_fields, _) => {
-            let fields = pat_fields.iter().map(|field| {
-                field.ident.to_string()
-                // TODO: raise error if pat != field (I think this is matching for {field_ident: field_pat})
-                // let field_pat = translate_pat(*field.pat);
-            });
-            let ret = format!("{}(__r)", translate_qpath(qpath),);
-            (ret, fields.collect_vec())
-        }
-        _ => {
-            // let ret = format!("pat<{:#?}>", pat.kind);
-            // ret
-            ("".to_string(), vec![])
+impl Translatable for rustc_hir::QPath<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self {
+            rustc_hir::QPath::Resolved(_, path) => translate_list(path.segments, ctx, "_"),
+            rustc_hir::QPath::TypeRelative(ty, segment) => {
+                format!("{}_{}", ty.translate(ctx), segment.translate(ctx))
+            }
+            _ => "".to_string(),
         }
     }
 }
 
-pub fn translate_variant_data(variant_data: VariantData) -> Vec<Field> {
+impl Translatable for rustc_hir::Ty<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self.kind {
+            TyKind::Path(qpath) => qpath.translate(ctx),
+            TyKind::Tup(tys) => {
+                format!("({})", translate_list(tys, ctx, ", "))
+            }
+            _ => {
+                eprintln!("No translation for type: {:#?}", self.kind);
+                "<missing-type>".to_string()
+            }
+        }
+    }
+}
+
+impl Translatable for rustc_hir::Param<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        self.pat.translate(ctx)
+    }
+}
+
+impl Translatable for rustc_hir::Pat<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self.kind {
+            rustc_hir::PatKind::Binding(_a, _id, name, _n) => name.as_str().to_string(),
+            rustc_hir::PatKind::Path(qpath) => qpath.translate(ctx),
+            rustc_hir::PatKind::Struct(qpath, pat_fields, _) => {
+                format!("{}(__r)", qpath.translate(ctx))
+            }
+            _ => "".to_string(),
+        }
+    }
+}
+
+impl Translatable for LitKind {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self {
+            LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
+                let ret = format!("\"{}\"", sym.as_str());
+                ret
+            }
+            LitKind::Int(i, _) => i.to_string(),
+            _ => "".to_string(),
+        }
+    }
+}
+
+impl Translatable for rustc_hir::Expr<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self.kind {
+            rustc_hir::ExprKind::Lit(lit) => lit.node.translate(ctx),
+            rustc_hir::ExprKind::Binary(op, e1, e2) => {
+                format!(
+                    "{} {} {}",
+                    e1.translate(ctx),
+                    op.node.as_str(),
+                    e2.translate(ctx)
+                )
+            }
+            rustc_hir::ExprKind::Call(op, args) => {
+                let operator = op.translate(ctx);
+                let arguments = translate_list(args, ctx, ", ");
+                if ctx.stateful_ops.contains(&operator) {
+                    // If this is a stateful operation, we need to add the state as the first argument
+                    return format!("{}(state, {})", operator, arguments);
+                }
+                if arguments == "" {
+                    // Quint doesn't have nullary operators
+                    return operator;
+                }
+                format!("{}({})", operator, arguments)
+            }
+            rustc_hir::ExprKind::Path(qpath) => {
+                let name = qpath.translate(ctx);
+                if ctx.record_fields.contains(&name) {
+                    format!("__r.{}", name)
+                } else {
+                    name
+                }
+            }
+            rustc_hir::ExprKind::AddrOf(_b, _m, expr) => expr.translate(ctx),
+            rustc_hir::ExprKind::Array(exprs) => format!("[{}]", translate_list(exprs, ctx, ", ")),
+            rustc_hir::ExprKind::Block(block, _label) => match block.expr {
+                Some(expr) => expr.translate(ctx),
+                None => "".to_string(),
+            },
+            rustc_hir::ExprKind::Match(expr, arm, _source) => {
+                let match_expr = expr.translate(ctx);
+                if match_expr != "msg" {
+                    // FIXME: should probably look into type for ExecuteMsg type
+                    return "Response_Ok(Response_new)".to_string();
+                }
+
+                format!(
+                    "match {} {{\n{}}}",
+                    match_expr,
+                    translate_list(arm, ctx, "\n")
+                )
+            }
+            rustc_hir::ExprKind::MethodCall(_, expr, _, _) => expr.translate(ctx),
+            _ => {
+                eprintln!("No translation for expr: {:#?}", self.kind);
+                "<missing-expr>".to_string()
+            }
+        }
+    }
+}
+
+impl Translatable for rustc_hir::Arm<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let pat = self.pat.translate(ctx);
+        let fields = get_pat_fields(*self.pat);
+        // Put fields in context so they are translated as __r.field
+        ctx.record_fields.extend(fields.clone());
+        let expr = self.body.translate(ctx);
+        // Remove fields from context
+        fields.iter().for_each(|field| {
+            ctx.record_fields.remove(
+                ctx.record_fields
+                    .iter()
+                    .position(|x| *x == *field)
+                    .expect("field not found"),
+            );
+        });
+
+        ctx.message_type_for_action.insert(
+            expr.clone().split('(').next().unwrap().to_string(),
+            pat.clone().split('(').next().unwrap().to_string(),
+        );
+        format!("  | {} => {}", pat, expr)
+    }
+}
+
+impl Translatable for rustc_hir::GenericArg<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self {
+            rustc_hir::GenericArg::Type(ty) => ty.translate(ctx),
+            _ => "".to_string(),
+        }
+    }
+}
+
+impl Translatable for rustc_middle::ty::GenericArg<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let kind = self.unpack();
+        match kind {
+            rustc_middle::ty::GenericArgKind::Type(ty) => {
+                let ret = format!("{:#?}", ty);
+                // FIXME: This should be quite unstable, but I couldn't figure out how to navigate `ty` here
+                ret.split("::")
+                    .last()
+                    .unwrap()
+                    .split(' ')
+                    .last()
+                    .unwrap()
+                    .split(')')
+                    .next()
+                    .unwrap()
+                    .to_string()
+            }
+            _ => {
+                let ret = format!("<{:#?}>", kind);
+                ret
+            }
+        }
+    }
+}
+
+fn get_pat_fields(pat: rustc_hir::Pat) -> Vec<String> {
+    match pat.kind {
+        // TODO: raise error if pat != field (I think this is matching for {field_ident: field_pat})
+        // let field_pat = translate_pat(*field.pat);
+        rustc_hir::PatKind::Struct(_, pat_fields, _) => pat_fields
+            .iter()
+            .map(|field| field.ident.to_string())
+            .collect_vec(),
+        _ => vec![],
+    }
+}
+
+pub fn get_variant_fields(ctx: &mut Context, variant_data: VariantData) -> Vec<Field> {
     let nondet_value_for_type = HashMap::from([
         ("str", "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string()),
         ("int", "0.to(MAX_AMOUNT).oneOf()".to_string()),
         // TODO list -> possibilities
     ]);
-    // println!("Found a struct: {variant_data:#?}");
     variant_data
         .fields()
         .iter()
         .map(|field| {
             let field_ident = field.ident.to_string();
-            let field_type = translate_type(*field.ty);
+            let field_type = field.ty.translate(ctx);
             Field {
                 name: field_ident,
                 ty: field_type.clone(),
@@ -96,29 +266,6 @@ pub fn translate_variant_data(variant_data: VariantData) -> Vec<Field> {
             }
         })
         .collect_vec()
-}
-
-pub fn translate_lit(lit: &LitKind) -> String {
-    match lit {
-        LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
-            let ret = format!("\"{}\"", sym.as_str());
-            ret
-        }
-        LitKind::Int(i, _) => i.to_string(),
-        _ => "".to_string(),
-    }
-}
-
-pub fn translate_qpath(qpath: rustc_hir::QPath) -> String {
-    match qpath {
-        rustc_hir::QPath::Resolved(_, path) => segment_to_string(path.segments, "_"),
-        rustc_hir::QPath::TypeRelative(ty, segment) => {
-            let ty = translate_type(*ty);
-            let segment = segment_to_string(&[*segment], "_");
-            format!("{}_{}", ty, segment)
-        }
-        _ => "".to_string(),
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -140,131 +287,15 @@ pub struct Context {
     pub constructors: HashMap<String, Constructor>,
     pub stateful_ops: Vec<String>,
     pub structs: HashMap<String, Vec<Field>>,
+    pub record_fields: Vec<String>,
+    pub current_item_name: String,
 }
 
-pub fn translate_expr(
+pub fn try_to_translate_state_var_info(
     ctx: &mut Context,
-    expr: rustc_hir::Expr,
-    record_fields: &Vec<String>,
-) -> String {
-    match expr.kind {
-        rustc_hir::ExprKind::Lit(lit) => translate_lit(&lit.node),
-        rustc_hir::ExprKind::Binary(op, e1, e2) => {
-            let s1 = translate_expr(ctx, *e1, record_fields);
-            let s2 = translate_expr(ctx, *e2, record_fields);
-            let ret = format!("{} {} {}", s1, op.node.as_str(), s2);
-            ret
-        }
-        rustc_hir::ExprKind::Call(op, args) => {
-            let s1 = translate_expr(ctx, *op, record_fields);
-            let s2 = args
-                .iter()
-                .map(|arg| translate_expr(ctx, *arg, record_fields))
-                .collect_vec();
-            if ctx.stateful_ops.contains(&s1) {
-                // If this is a stateful operation, we need to add the state as the first argument
-                return format!("{}(state, {})", s1, s2.join(", "));
-            }
-            if s2.is_empty() {
-                // Quint doesn't have nullary operators
-                return s1;
-            }
-            let ret = format!("{}({})", s1, s2.join(", "));
-            ret
-        }
-        rustc_hir::ExprKind::Path(qpath) => {
-            let name = translate_qpath(qpath);
-            if record_fields.contains(&name) {
-                let ret = format!("__r.{}", name);
-                ret
-            } else {
-                name
-            }
-        }
-        rustc_hir::ExprKind::AddrOf(_b, _m, expr) => translate_expr(ctx, *expr, record_fields),
-        rustc_hir::ExprKind::Array(exprs) => {
-            let ret = format!(
-                "[{}]",
-                exprs
-                    .iter()
-                    .map(|expr| translate_expr(ctx, *expr, record_fields))
-                    .collect_vec()
-                    .join(", ")
-            );
-            ret
-        }
-        rustc_hir::ExprKind::Block(block, _label) => match block.expr {
-            Some(expr) => {
-                let ret = format!("{{ {} }}", translate_expr(ctx, *expr, record_fields));
-                ret
-            }
-            None => "".to_string(),
-        },
-        rustc_hir::ExprKind::Match(expr, arm, _source) => {
-            let match_expr = translate_expr(ctx, *expr, record_fields);
-            if match_expr != "msg" {
-                // FIXME: should probably look into type for ExecuteMsg type
-                return "Response_Ok(Response_new)".to_string();
-            }
-
-            let ret = format!(
-                "match {} {{\n{}}}",
-                match_expr,
-                arm.iter()
-                    .map(|arm| {
-                        let (pat, fields) = translate_pat(*arm.pat);
-                        let expr = translate_expr(ctx, *arm.body, &fields);
-                        ctx.message_type_for_action.insert(
-                            expr.clone().split('(').next().unwrap().to_string(),
-                            pat.clone().split('(').next().unwrap().to_string(),
-                        );
-                        format!("  | {} => {}", pat, expr)
-                    })
-                    .collect_vec()
-                    .join("\n")
-            );
-            ret
-        }
-        rustc_hir::ExprKind::MethodCall(_, expr, _, _) => translate_expr(ctx, *expr, record_fields),
-        _ => {
-            eprintln!("No translation for expr: {:#?}", expr.kind);
-            "<missing-expr>".to_string()
-        }
-    }
-}
-
-fn translate_generic_arg(arg: rustc_hir::GenericArg) -> String {
-    match arg {
-        rustc_hir::GenericArg::Type(ty) => translate_type(*ty),
-        _ => "".to_string(),
-    }
-}
-
-fn translate_rustc_middle_generic_arg(arg: rustc_middle::ty::GenericArg) -> String {
-    let kind = arg.unpack();
-    match kind {
-        rustc_middle::ty::GenericArgKind::Type(ty) => {
-            let ret = format!("{:#?}", ty);
-            // FIXME: This should be quite unstable, but I couldn't figure out how to navigate `ty` here
-            ret.split("::")
-                .last()
-                .unwrap()
-                .split(' ')
-                .last()
-                .unwrap()
-                .split(')')
-                .next()
-                .unwrap()
-                .to_string()
-        }
-        _ => {
-            let ret = format!("<{:#?}>", kind);
-            ret
-        }
-    }
-}
-
-pub fn try_to_translate_state_var_info(tcx: TyCtxt, body: rustc_hir::Body) -> Option<String> {
+    tcx: TyCtxt,
+    body: rustc_hir::Body,
+) -> Option<String> {
     if let rustc_hir::ExprKind::Call(expr, _) = body.value.kind {
         if let rustc_hir::ExprKind::Path(rustc_hir::QPath::TypeRelative(ty, segment)) = expr.kind {
             // let method = segment.ident;
@@ -288,10 +319,8 @@ pub fn try_to_translate_state_var_info(tcx: TyCtxt, body: rustc_hir::Body) -> Op
                         // We need to look into the GenericArgs here (from FnDef)
                         // to annotate the quint state variable properly
 
-                        let translated_types = generic_args
-                            .iter()
-                            .map(|t| translate_rustc_middle_generic_arg(t))
-                            .collect_vec();
+                        let translated_types =
+                            generic_args.iter().map(|t| t.translate(ctx)).collect_vec();
                         // segment_to_string(path.segments);
 
                         // For Map::new, the 2nd and 3rd generics are the map types
@@ -315,27 +344,6 @@ pub fn try_to_translate_state_var_info(tcx: TyCtxt, body: rustc_hir::Body) -> Op
     None
 }
 
-pub fn translate_type(ty: rustc_hir::Ty) -> String {
-    // println!("Translating type: {:#?}", ty.kind);
-    match ty.kind {
-        TyKind::Path(qpath) => translate_qpath(qpath),
-        TyKind::Tup(tys) => {
-            let ret = format!(
-                "({})",
-                tys.iter()
-                    .map(|ty| translate_type(*ty))
-                    .collect_vec()
-                    .join(", ")
-            );
-            ret
-        }
-        _ => {
-            eprintln!("No translation for type: {:#?}", ty.kind);
-            "<missing-type>".to_string()
-        }
-    }
-}
-
 pub fn format_fields(fields: Vec<Field>) -> String {
     fields
         .iter()
@@ -344,46 +352,56 @@ pub fn format_fields(fields: Vec<Field>) -> String {
         .join(", ")
 }
 
-pub fn translate_enum(ctx: &mut Context, name: String, enum_def: rustc_hir::EnumDef) -> String {
-    enum_def
-        .variants
-        .iter()
-        .map(|variant| {
-            let ident = variant.ident;
-            let qualified_ident = format!("{name}_{ident}");
-            if variant.data.fields().is_empty() {
-                return format!("  | {qualified_ident}");
-            }
-            let fields = translate_variant_data(variant.data);
-            ctx.constructors.insert(
-                qualified_ident.clone(),
-                Constructor {
-                    name: qualified_ident.clone(),
-                    fields: fields.clone(),
-                },
-            );
-            let ret = format!("  | {qualified_ident}({{ {} }})", format_fields(fields));
-            ret
-        })
-        .collect_vec()
-        .join("\n")
+impl Translatable for rustc_hir::EnumDef<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        translate_list(self.variants, ctx, "\n")
+    }
 }
 
-pub fn translate_fn_decl(decl: rustc_hir::FnDecl, body: rustc_hir::Body) -> (String, bool) {
+impl Translatable for rustc_hir::Variant<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let ident = self.ident;
+        let qualified_ident = format!("{}_{ident}", ctx.current_item_name);
+        if self.data.fields().is_empty() {
+            return format!("  | {qualified_ident}");
+        }
+        let fields = get_variant_fields(ctx, self.data);
+        ctx.constructors.insert(
+            qualified_ident.clone(),
+            Constructor {
+                name: qualified_ident.clone(),
+                fields: fields.clone(),
+            },
+        );
+        format!("  | {qualified_ident}({{ {} }})", format_fields(fields))
+    }
+}
+
+impl Translatable for rustc_hir::FnRetTy<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self {
+            rustc_hir::FnRetTy::DefaultReturn(_) => "void".to_string(),
+            rustc_hir::FnRetTy::Return(ty) => ty.translate(ctx),
+        }
+    }
+}
+
+pub fn translate_fn_decl(
+    ctx: &mut Context,
+    decl: rustc_hir::FnDecl,
+    body: rustc_hir::Body,
+) -> (String, bool) {
     let param_tuples = zip(decl.inputs, body.params);
-    let inputs = param_tuples.map(|(input, param)| {
-        let translated_param = translate_param(*param);
-        let translated_type = translate_type(*input);
-        let ret = format!("{}: {}", translated_param, translated_type);
-        ret
-    });
+    let input = param_tuples
+        .map(|(input, param)| {
+            let translated_param = param.translate(ctx);
+            let translated_type = input.translate(ctx);
+            format!("{}: {}", translated_param, translated_type)
+        })
+        .collect_vec()
+        .join(", ");
 
-    let output = match decl.output {
-        rustc_hir::FnRetTy::DefaultReturn(_) => "void".to_string(),
-        rustc_hir::FnRetTy::Return(ty) => translate_type(*ty),
-    };
-
-    let input = inputs.collect_vec().join(", ");
+    let output = decl.output.translate(ctx);
 
     // If one of the params is of type Deps or DepsMut, and the return type is "Result", this is a state transformer,
     // and therefore should take the state as an argument and return it
