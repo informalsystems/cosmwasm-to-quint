@@ -7,13 +7,13 @@ use rustc_middle::ty::TyCtxt;
 use std::iter::zip;
 
 pub fn segment_to_string(segments: &[rustc_hir::PathSegment], sep: &str) -> String {
-    // let sep = optional_sep.unwrap_or("::".to_string()).as_str();
-
     let translated_segments: HashMap<&str, &str> = HashMap::from([
         ("Vec", "List"),
         ("String", "str"),
         ("Uint128", "int"),
+        ("Uint64", "int"),
         ("u128", "int"),
+        ("u64", "int"),
         ("Timestamp", "int"),
         ("DepsMut", "Deps"),
         ("Ok", "Response_Ok"),
@@ -23,7 +23,21 @@ pub fn segment_to_string(segments: &[rustc_hir::PathSegment], sep: &str) -> Stri
         let s = seg.ident.as_str();
         let translated = translated_segments.get(s);
         match translated {
-            Some(t) => t.to_string(),
+            Some(t) => match seg.args {
+                Some(args) => {
+                    let translated_args = args
+                        .args
+                        .iter()
+                        .map(|arg| translate_generic_arg(*arg))
+                        .collect_vec();
+
+                    if translated_args.join(", ") == "" {
+                        return t.to_string();
+                    }
+                    format!("{}[{}]", t, translated_args.join(", "))
+                }
+                None => t.to_string(),
+            },
             None => s.to_string(),
         }
     });
@@ -58,16 +72,6 @@ pub fn translate_pat(pat: rustc_hir::Pat) -> (String, Vec<String>) {
         }
     }
 }
-
-// pub fn nondet_value_for_type(ty: String) -> String {
-//     let nondet_value_for_type = HashMap::from([
-//         ("str", "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string()),
-//         ("int", "0.to(MAX_AMOUNT).oneOf()".to_string()),
-//         // TODO list -> possibilities
-//         // TODO turn this into a recursive function for structs
-//     ]);
-//     *nondet_value_for_type.get(&ty).unwrap()
-// }
 
 pub fn translate_variant_data(variant_data: VariantData) -> Vec<Field> {
     let nondet_value_for_type = HashMap::from([
@@ -110,7 +114,7 @@ pub fn translate_qpath(qpath: rustc_hir::QPath) -> String {
         rustc_hir::QPath::Resolved(_, path) => segment_to_string(path.segments, "_"),
         rustc_hir::QPath::TypeRelative(ty, segment) => {
             let ty = translate_type(*ty);
-            let segment = segment.ident.to_string();
+            let segment = segment_to_string(&[*segment], "_");
             format!("{}_{}", ty, segment)
         }
         _ => "".to_string(),
@@ -135,6 +139,7 @@ pub struct Context {
     pub message_type_for_action: HashMap<String, String>,
     pub constructors: HashMap<String, Constructor>,
     pub stateful_ops: Vec<String>,
+    pub structs: HashMap<String, Vec<Field>>,
 }
 
 pub fn translate_expr(
@@ -196,9 +201,15 @@ pub fn translate_expr(
             None => "".to_string(),
         },
         rustc_hir::ExprKind::Match(expr, arm, _source) => {
+            let match_expr = translate_expr(ctx, *expr, record_fields);
+            if match_expr != "msg" {
+                // FIXME: should probably look into type for ExecuteMsg type
+                return "Response_Ok(Response_new)".to_string();
+            }
+
             let ret = format!(
                 "match {} {{\n{}}}",
-                translate_expr(ctx, *expr, record_fields),
+                match_expr,
                 arm.iter()
                     .map(|arm| {
                         let (pat, fields) = translate_pat(*arm.pat);
@@ -216,14 +227,20 @@ pub fn translate_expr(
         }
         rustc_hir::ExprKind::MethodCall(_, expr, _, _) => translate_expr(ctx, *expr, record_fields),
         _ => {
-            let ret = format!("<{:#?}>", expr.kind);
-            ret
-            // "".to_string()
+            eprintln!("No translation for expr: {:#?}", expr.kind);
+            "<missing-expr>".to_string()
         }
     }
 }
 
-fn translate_generic_arg(arg: rustc_middle::ty::GenericArg) -> String {
+fn translate_generic_arg(arg: rustc_hir::GenericArg) -> String {
+    match arg {
+        rustc_hir::GenericArg::Type(ty) => translate_type(*ty),
+        _ => "".to_string(),
+    }
+}
+
+fn translate_rustc_middle_generic_arg(arg: rustc_middle::ty::GenericArg) -> String {
     let kind = arg.unpack();
     match kind {
         rustc_middle::ty::GenericArgKind::Type(ty) => {
@@ -273,7 +290,7 @@ pub fn try_to_translate_state_var_info(tcx: TyCtxt, body: rustc_hir::Body) -> Op
 
                         let translated_types = generic_args
                             .iter()
-                            .map(|t| translate_generic_arg(t))
+                            .map(|t| translate_rustc_middle_generic_arg(t))
                             .collect_vec();
                         // segment_to_string(path.segments);
 
@@ -299,11 +316,22 @@ pub fn try_to_translate_state_var_info(tcx: TyCtxt, body: rustc_hir::Body) -> Op
 }
 
 pub fn translate_type(ty: rustc_hir::Ty) -> String {
+    // println!("Translating type: {:#?}", ty.kind);
     match ty.kind {
-        TyKind::Path(rustc_hir::QPath::Resolved(_, path)) => segment_to_string(path.segments, "_"),
-        _ => {
-            let ret = format!("<{:#?}>", ty.kind);
+        TyKind::Path(qpath) => translate_qpath(qpath),
+        TyKind::Tup(tys) => {
+            let ret = format!(
+                "({})",
+                tys.iter()
+                    .map(|ty| translate_type(*ty))
+                    .collect_vec()
+                    .join(", ")
+            );
             ret
+        }
+        _ => {
+            eprintln!("No translation for type: {:#?}", ty.kind);
+            "<missing-type>".to_string()
         }
     }
 }

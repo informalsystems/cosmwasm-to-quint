@@ -56,17 +56,6 @@ pub const ACTIONS: &str = "
 
   action advance_time = time' = time + 1
 
-  action execute_step = all {
-    any {
-      deposit_action,
-      withdraw_action,
-      stake_action,
-      unstake_action,
-    },
-    advance_time,
-    bank' = bank,
-  }
-
   action step = {
     match return {
       | Response_Ok(response) =>

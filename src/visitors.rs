@@ -39,8 +39,12 @@ impl<'tcx> Visitor<'tcx> for TypeTranslator<'tcx> {
         match item.kind {
             rustc_hir::ItemKind::Struct(variant_data, _generics) => {
                 // println!("Found a struct: {variant_data:#?}");
-                let fields = format_fields(translate_variant_data(variant_data));
-                println!("type {name} = {{ {fields} }}")
+                let fields = translate_variant_data(variant_data);
+                self.ctx
+                    .structs
+                    .insert(name.as_str().to_string(), fields.clone());
+                let formatted_fields = format_fields(fields);
+                println!("type {name} = {{ {formatted_fields} }}")
             }
 
             rustc_hir::ItemKind::Enum(enum_def, _generics) => {
@@ -122,7 +126,7 @@ impl<'tcx> Visitor<'tcx> for OpTranslator<'tcx> {
                             )
                         })
                         .collect_vec()
-                        .join(", ");
+                        .join("\n  ");
                     let field_params = fields
                         .iter()
                         .map(|field| {

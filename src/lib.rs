@@ -112,14 +112,42 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
     }
 }
 
-fn init_value_for_type(ty: String) -> String {
+fn init_value_for_type(ctx: &Context, ty: String) -> String {
     let map_parts = ty.split("->").collect_vec();
     if map_parts.len() > 1 {
-        return format!("Map()");
+        return "Map()".to_string();
     }
-    let init_values_by_type: HashMap<&str, &str> =
-        HashMap::from([("List", "List()"), ("str", "\"\""), ("int", "0")]);
-    init_values_by_type.get(ty.as_str()).unwrap().to_string()
+
+    if ctx.structs.contains_key(&ty) {
+        let fields = ctx.structs.get(&ty).unwrap();
+        let struct_value = fields
+            .iter()
+            .map(|field| {
+                format!(
+                    "{}: {}",
+                    field.name,
+                    init_value_for_type(ctx, field.ty.clone())
+                )
+            })
+            .collect_vec()
+            .join(",");
+        return format!("{{ {} }}", struct_value);
+    }
+
+    let init_values_by_type: HashMap<&str, &str> = HashMap::from([
+        ("List", "List()"),
+        ("str", "\"\""),
+        ("int", "0"),
+        ("Addr", "\"s1\""),
+    ]);
+
+    init_values_by_type
+        .get(ty.as_str())
+        .unwrap_or_else(|| {
+            eprintln!("No init value for type: {ty}");
+            &"<missing-type>"
+        })
+        .to_string()
 }
 
 fn visit_test(tcx: TyCtxt) -> TyCtxt {
@@ -135,6 +163,7 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
                 fields: vec![],
             },
         )]),
+        structs: HashMap::new(),
         stateful_ops: vec![],
     };
 
@@ -164,12 +193,37 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
         + &op_translator
             .contract_state
             .iter()
-            .map(|field| format!("  {}: {}\n", field.0, init_value_for_type(field.1.clone())))
+            .map(|field| {
+                format!(
+                    "  {}: {}\n",
+                    field.0,
+                    init_value_for_type(&op_translator.ctx, field.1.clone())
+                )
+            })
             .collect_vec()
             .join(",\n")
         + "}";
     println!("{initializer}");
 
+    let actions = op_translator
+        .ctx
+        .stateful_ops
+        .iter()
+        .filter(|op| *op != &"execute".to_string() && *op != &"instantiate".to_string())
+        .map(|op| format!("{op}_action"))
+        .collect_vec()
+        .join(",\n      ");
+    println!(
+        "
+  action execute_step = all {{
+    any {{
+      {actions}
+    }},
+    advance_time,
+    bank' = bank,
+  }}
+"
+    );
     tcx
 }
 
