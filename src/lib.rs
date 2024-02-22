@@ -4,7 +4,6 @@
 
 pub mod boilerplate;
 pub mod translate;
-pub mod visitors;
 
 extern crate itertools;
 extern crate rustc_ast;
@@ -23,10 +22,9 @@ use itertools::Itertools;
 use rustc_middle::ty::TyCtxt;
 use rustc_plugin::{CrateFilter, RustcPlugin, RustcPluginArgs, Utf8Path};
 use serde::{Deserialize, Serialize};
+use translate::Translatable;
 
 use crate::translate::{Constructor, Context};
-
-use crate::visitors::{OpTranslator, TypeTranslator};
 
 use crate::boilerplate::{ACTIONS, CONTRACT_ADDRESS, IMPORTS, INITIALIZERS, VALUES, VARS};
 
@@ -150,8 +148,24 @@ fn init_value_for_type(ctx: &Context, ty: String) -> String {
         .to_string()
 }
 
-fn visit_test(tcx: TyCtxt) -> TyCtxt {
-    let ctx = Context {
+fn translation_priority(item: &rustc_hir::Item<'_>) -> i32 {
+    match item.kind {
+        rustc_hir::ItemKind::Struct(..) => 1,
+        rustc_hir::ItemKind::Enum(..) => 2,
+        rustc_hir::ItemKind::Fn(..) => 3,
+        _ => 4,
+    }
+}
+
+fn visit_item(ctx: &mut Context, item: rustc_hir::Item) {
+    let translation = item.translate(ctx);
+    if !translation.is_empty() {
+        println!("{}\n", translation);
+    }
+}
+
+fn translate_items(tcx: TyCtxt) -> TyCtxt {
+    let mut ctx = Context {
         message_type_for_action: HashMap::from([(
             "instantiate".to_string(),
             "InstantiateMsg".to_string(),
@@ -167,23 +181,18 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
         stateful_ops: vec![],
         record_fields: vec![],
         current_item_name: "".to_string(),
-    };
-
-    let mut type_translator = TypeTranslator {
         tcx,
         contract_state: vec![],
-        ctx,
     };
-    tcx.hir()
-        .visit_all_item_likes_in_crate(&mut type_translator);
 
-    let mut op_translator = OpTranslator {
-        tcx,
-        ctx: type_translator.ctx,
-        contract_state: type_translator.contract_state,
-    };
-    tcx.hir().visit_all_item_likes_in_crate(&mut op_translator);
-    let contract_state = op_translator
+    let items = tcx
+        .hir()
+        .items()
+        .map(|item_id| tcx.hir().item(item_id))
+        .sorted_by(|a, b| translation_priority(a).cmp(&translation_priority(b)));
+    items.for_each(|item| visit_item(&mut ctx, *item));
+
+    let contract_state = ctx
         .contract_state
         .iter()
         .map(|x| format!("{}: {}", x.0, x.1))
@@ -192,14 +201,14 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
     println!("type ContractState = {{\n  {contract_state}\n}}");
 
     let initializer = "pure val init_contract_state = {\n".to_string()
-        + &op_translator
+        + &ctx
             .contract_state
             .iter()
             .map(|field| {
                 format!(
                     "  {}: {}\n",
                     field.0,
-                    init_value_for_type(&op_translator.ctx, field.1.clone())
+                    init_value_for_type(&ctx, field.1.clone())
                 )
             })
             .collect_vec()
@@ -207,8 +216,7 @@ fn visit_test(tcx: TyCtxt) -> TyCtxt {
         + "}";
     println!("{initializer}");
 
-    let actions = op_translator
-        .ctx
+    let actions = ctx
         .stateful_ops
         .iter()
         .filter(|op| *op != &"execute".to_string() && *op != &"instantiate".to_string())
@@ -240,6 +248,6 @@ fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     print!("{VALUES}");
     print!("{INITIALIZERS}");
     print!("{ACTIONS}");
-    visit_test(tcx);
+    translate_items(tcx);
     println!("}}");
 }

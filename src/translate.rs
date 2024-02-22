@@ -33,26 +33,27 @@ impl Translatable for rustc_hir::PathSegment<'_> {
             ("u128", "int"),
             ("u64", "int"),
             ("Timestamp", "int"),
-            ("DepsMut", "Deps"),
+            ("DepsMut", "ContractState"),
+            ("Deps", "ContractState"),
             ("Ok", "Response_Ok"),
+            ("deps", "state"),
+            ("_deps", "state"),
         ]);
 
         let s = self.ident.as_str();
-        let translated = translated_segments.get(s);
-        match translated {
-            Some(t) => match self.args {
-                Some(args) => {
-                    let translated_args = translate_list(args.args, ctx, ", ");
+        let translated = translated_segments.get(s).unwrap_or(&s);
 
-                    if translated_args == *"" {
-                        return t.to_string();
-                    }
+        match self.args {
+            Some(args) => {
+                let translated_args = translate_list(args.args, ctx, ", ");
 
-                    format!("{}[{}]", t, translated_args)
+                if translated_args == *"" {
+                    return translated.to_string();
                 }
-                None => t.to_string(),
-            },
-            None => s.to_string(),
+
+                format!("{}[{}]", translated, translated_args)
+            }
+            None => translated.to_string(),
         }
     }
 }
@@ -101,7 +102,7 @@ impl Translatable for rustc_hir::Pat<'_> {
 }
 
 impl Translatable for LitKind {
-    fn translate(&self, ctx: &mut Context) -> String {
+    fn translate(&self, _ctx: &mut Context) -> String {
         match self {
             LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
                 let ret = format!("\"{}\"", sym.as_str());
@@ -208,24 +209,27 @@ impl Translatable for rustc_hir::GenericArg<'_> {
     }
 }
 
-impl Translatable for rustc_middle::ty::GenericArg<'_> {
+impl Translatable for rustc_middle::ty::Ty<'_> {
     fn translate(&self, _ctx: &mut Context) -> String {
+        // FIXME: This should be quite unstable, but I couldn't figure out how to navigate `ty` here
+        format!("{:#?}", self)
+            .split("::")
+            .last()
+            .unwrap()
+            .split(' ')
+            .last()
+            .unwrap()
+            .split(')')
+            .next()
+            .unwrap()
+            .to_string()
+    }
+}
+impl Translatable for rustc_middle::ty::GenericArg<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
         let kind = self.unpack();
         match kind {
-            rustc_middle::ty::GenericArgKind::Type(ty) => {
-                let ret = format!("{:#?}", ty);
-                // FIXME: This should be quite unstable, but I couldn't figure out how to navigate `ty` here
-                ret.split("::")
-                    .last()
-                    .unwrap()
-                    .split(' ')
-                    .last()
-                    .unwrap()
-                    .split(')')
-                    .next()
-                    .unwrap()
-                    .to_string()
-            }
+            rustc_middle::ty::GenericArgKind::Type(ty) => ty.translate(ctx),
             rustc_middle::ty::GenericArgKind::Const(_) => "".to_string(),
             rustc_middle::ty::GenericArgKind::Lifetime(_) => "".to_string(),
         }
@@ -281,21 +285,19 @@ pub struct Constructor {
     pub fields: Vec<Field>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Context {
+#[derive(Clone)]
+pub struct Context<'tcx> {
     pub message_type_for_action: HashMap<String, String>,
     pub constructors: HashMap<String, Constructor>,
     pub stateful_ops: Vec<String>,
     pub structs: HashMap<String, Vec<Field>>,
     pub record_fields: Vec<String>,
     pub current_item_name: String,
+    pub tcx: TyCtxt<'tcx>,
+    pub contract_state: Vec<(String, String)>,
 }
 
-pub fn try_to_translate_state_var_info(
-    ctx: &mut Context,
-    tcx: TyCtxt,
-    body: rustc_hir::Body,
-) -> Option<String> {
+pub fn try_to_translate_state_var_info(ctx: &mut Context, body: rustc_hir::Body) -> Option<String> {
     if let rustc_hir::ExprKind::Call(expr, _) = body.value.kind {
         if let rustc_hir::ExprKind::Path(rustc_hir::QPath::TypeRelative(ty, segment)) = expr.kind {
             // let method = segment.ident;
@@ -303,8 +305,8 @@ pub fn try_to_translate_state_var_info(
             // println!("Method: {method} ({method_args:#?})");
             if let TyKind::Path(rustc_hir::QPath::Resolved(_, path)) = ty.kind {
                 if let rustc_hir::def::Res::Def(kind, def_id) = path.res {
-                    let crate_name = tcx.crate_name(def_id.krate);
-                    if (crate_name.as_str() != "cw_storage_plus") {
+                    let crate_name = ctx.tcx.crate_name(def_id.krate);
+                    if crate_name.as_str() != "cw_storage_plus" {
                         return None;
                     }
 
@@ -314,7 +316,7 @@ pub fn try_to_translate_state_var_info(
 
                     let def_id = expr.hir_id.owner.def_id; // def_id identifies the main function
 
-                    let ty = tcx.typeck(def_id).node_type(expr.hir_id);
+                    let ty = ctx.tcx.typeck(def_id).node_type(expr.hir_id);
                     if let rustc_type_ir::TyKind::FnDef(ty_def_id, generic_args) = ty.kind() {
                         // We need to look into the GenericArgs here (from FnDef)
                         // to annotate the quint state variable properly
@@ -326,14 +328,13 @@ pub fn try_to_translate_state_var_info(
                         // For Map::new, the 2nd and 3rd generics are the map types
                         // For Item::new, the 2nd generic is the type
                         // Are there other options?
-                        let translated_type =
-                            if (path.segments[0].ident.as_str().starts_with("Map")) {
-                                let ret =
-                                    format!("{} -> {}", translated_types[1], translated_types[2]);
-                                ret.to_string()
-                            } else {
-                                translated_types[1].clone()
-                            };
+                        let translated_type = if path.segments[0].ident.as_str().starts_with("Map")
+                        {
+                            let ret = format!("{} -> {}", translated_types[1], translated_types[2]);
+                            ret.to_string()
+                        } else {
+                            translated_types[1].clone()
+                        };
 
                         return Some(translated_type);
                     }
@@ -396,6 +397,10 @@ pub fn translate_fn_decl(
         .map(|(input, param)| {
             let translated_param = param.translate(ctx);
             let translated_type = input.translate(ctx);
+            if translated_type == "ContractState" {
+                ctx.stateful_ops.push(ctx.current_item_name.clone());
+                return "state: ContractState".to_string();
+            }
             format!("{}: {}", translated_param, translated_type)
         })
         .collect_vec()
@@ -405,11 +410,126 @@ pub fn translate_fn_decl(
 
     // If one of the params is of type Deps or DepsMut, and the return type is "Result", this is a state transformer,
     // and therefore should take the state as an argument and return it
-    if input.contains("Deps") && output.contains("Result") {
-        let ret = format!("(state: ContractState, {input}): ({output}, ContractState)");
+    if input.contains("ContractState") && output.contains("Result") {
+        let ret = format!("({input}): ({output}, ContractState)");
         return (ret, true);
     }
 
     let ret = format!("({}): {}", input, output);
     (ret, false)
+}
+pub fn should_skip(name: &str) -> bool {
+    name.starts_with('_')
+      || ["", "FIELDS", "VARIANTS"].contains(&name)
+      || name.starts_with("query") // skip query functions for now
+      || name.starts_with("Query")
+      || name.starts_with("ContractError")
+      || name.starts_with("get_")
+}
+
+impl Translatable for rustc_hir::Item<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let name = self.ident;
+        if should_skip(name.as_str()) {
+            return "".to_string();
+        }
+        ctx.current_item_name = name.as_str().to_string();
+
+        match self.kind {
+            rustc_hir::ItemKind::Const(_ty, _generics, body) => {
+                let const_item = ctx.tcx.hir().body(body);
+                match try_to_translate_state_var_info(ctx, *const_item) {
+                    Some(ret) => {
+                        ctx.contract_state
+                            .push((name.as_str().to_string().to_lowercase(), ret));
+                        "".to_string()
+                    }
+                    None => {
+                        format!("pure val {name} = {}", const_item.value.translate(ctx))
+                        // if !const_item.params.is_empty() {
+                        //     format!("{}", translate_list(const_item.params, ctx, ", "))
+                        // }
+                    }
+                }
+            }
+
+            rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
+                let body = ctx.tcx.hir().body(body_id);
+                let (sig, has_state) = translate_fn_decl(ctx, *sig.decl, *body);
+
+                let body_value = body.value.translate(ctx);
+                let empty_vec = vec![];
+                // FIXME: We need to do something about instantiate
+                if has_state && name.as_str() != "execute" && name.as_str() != "instantiate" {
+                    let (message_type, fields) =
+                        match ctx.message_type_for_action.get(&name.to_string()) {
+                            Some(s) => (
+                                s.clone(),
+                                ctx.constructors
+                                    .get(s)
+                                    .map(|x| &x.fields)
+                                    .unwrap_or(&empty_vec),
+                            ),
+                            None => (format!("MessageFor{}", name), &empty_vec),
+                        };
+                    let values_for_fields = fields
+                        .iter()
+                        .map(|field| {
+                            format!(
+                                "nondet {}: {} = {}",
+                                field.name, field.ty, field.nondet_value
+                            )
+                        })
+                        .collect_vec()
+                        .join("\n  ");
+                    let field_params = fields
+                        .iter()
+                        .map(|field| {
+                            let name = field.name.clone();
+                            format!("{name}: {name}")
+                        })
+                        .collect_vec()
+                        .join(", ");
+                    let msg_params = if fields.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("({{ {field_params} }})")
+                    };
+                    format!(
+                        "pure def {name}{sig} = ({body_value}, state)
+                            
+  action {name}_action = {{
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+  
+    {values_for_fields}
+    pure val message = {message_type}{msg_params}
+  
+    execute_message(message, max_funds)
+  }}"
+                    )
+                } else if name.as_str() == "instantiate" {
+                    format!("pure def {name}{sig} = ({body_value}, state)")
+                } else {
+                    format!("pure def {name}{sig} = {body_value}")
+                }
+            }
+            rustc_hir::ItemKind::Struct(variant_data, _generics) => {
+                let fields = get_variant_fields(ctx, variant_data);
+                ctx.structs
+                    .insert(name.as_str().to_string(), fields.clone());
+                let formatted_fields = format_fields(fields);
+                format!("type {name} = {{ {formatted_fields} }}")
+            }
+
+            rustc_hir::ItemKind::Enum(enum_def, _generics) => {
+                format!("type {name} =\n{}", enum_def.translate(ctx))
+            }
+            // Safely ignore import-related things
+            rustc_hir::ItemKind::Mod(_) => "".to_string(),
+            rustc_hir::ItemKind::Use(_, _) => "".to_string(),
+            rustc_hir::ItemKind::ExternCrate(_) => "".to_string(),
+            _ => missing_translation(*self, "item"),
+        }
+    }
 }
