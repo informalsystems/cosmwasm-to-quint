@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use itertools::Itertools;
 use rustc_ast::LitKind;
@@ -16,6 +16,11 @@ pub fn translate_list<T: Translatable>(items: &[T], ctx: &mut Context, sep: &str
         .map(|x| x.translate(ctx))
         .collect_vec()
         .join(sep)
+}
+
+pub fn missing_translation<T: Translatable + Debug>(item: T, descr: &str) -> String {
+    eprintln!("No translation for {descr}: {:#?}", item);
+    format!("<missing-{descr}>")
 }
 
 impl Translatable for rustc_hir::PathSegment<'_> {
@@ -59,7 +64,7 @@ impl Translatable for rustc_hir::QPath<'_> {
             rustc_hir::QPath::TypeRelative(ty, segment) => {
                 format!("{}_{}", ty.translate(ctx), segment.translate(ctx))
             }
-            _ => "".to_string(),
+            _ => missing_translation(*self, "qualified-path"),
         }
     }
 }
@@ -71,10 +76,7 @@ impl Translatable for rustc_hir::Ty<'_> {
             TyKind::Tup(tys) => {
                 format!("({})", translate_list(tys, ctx, ", "))
             }
-            _ => {
-                eprintln!("No translation for type: {:#?}", self.kind);
-                "<missing-type>".to_string()
-            }
+            _ => missing_translation(*self, "type"),
         }
     }
 }
@@ -93,7 +95,7 @@ impl Translatable for rustc_hir::Pat<'_> {
             rustc_hir::PatKind::Struct(qpath, pat_fields, _) => {
                 format!("{}(__r)", qpath.translate(ctx))
             }
-            _ => "".to_string(),
+            _ => missing_translation(*self, "pattern"),
         }
     }
 }
@@ -106,7 +108,7 @@ impl Translatable for LitKind {
                 ret
             }
             LitKind::Int(i, _) => i.to_string(),
-            _ => "".to_string(),
+            _ => missing_translation(self.clone(), "literal"),
         }
     }
 }
@@ -130,7 +132,7 @@ impl Translatable for rustc_hir::Expr<'_> {
                     // If this is a stateful operation, we need to add the state as the first argument
                     return format!("{}(state, {})", operator, arguments);
                 }
-                if arguments == "" {
+                if arguments.is_empty() {
                     // Quint doesn't have nullary operators
                     return operator;
                 }
@@ -164,10 +166,9 @@ impl Translatable for rustc_hir::Expr<'_> {
                 )
             }
             rustc_hir::ExprKind::MethodCall(_, expr, _, _) => expr.translate(ctx),
-            _ => {
-                eprintln!("No translation for expr: {:#?}", self.kind);
-                "<missing-expr>".to_string()
-            }
+            rustc_hir::ExprKind::DropTemps(expr) => expr.translate(ctx),
+            rustc_hir::ExprKind::Field(expr, field) => format!("{}.{}", expr.translate(ctx), field),
+            _ => missing_translation(*self, "expression"),
         }
     }
 }
@@ -201,13 +202,14 @@ impl Translatable for rustc_hir::GenericArg<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         match self {
             rustc_hir::GenericArg::Type(ty) => ty.translate(ctx),
-            _ => "".to_string(),
+            rustc_hir::GenericArg::Lifetime(_lt) => "".to_string(),
+            _ => missing_translation(*self, "generic-arg"),
         }
     }
 }
 
 impl Translatable for rustc_middle::ty::GenericArg<'_> {
-    fn translate(&self, ctx: &mut Context) -> String {
+    fn translate(&self, _ctx: &mut Context) -> String {
         let kind = self.unpack();
         match kind {
             rustc_middle::ty::GenericArgKind::Type(ty) => {
@@ -224,10 +226,8 @@ impl Translatable for rustc_middle::ty::GenericArg<'_> {
                     .unwrap()
                     .to_string()
             }
-            _ => {
-                let ret = format!("<{:#?}>", kind);
-                ret
-            }
+            rustc_middle::ty::GenericArgKind::Const(_) => "".to_string(),
+            rustc_middle::ty::GenericArgKind::Lifetime(_) => "".to_string(),
         }
     }
 }
