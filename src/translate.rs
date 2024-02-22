@@ -45,13 +45,18 @@ impl Translatable for rustc_hir::PathSegment<'_> {
 
         match self.args {
             Some(args) => {
-                let translated_args = translate_list(args.args, ctx, ", ");
+                if ["List", "Set"].contains(translated) {
+                    // FIXME: this should always happen after type-level polymorphism is implemented
+                    let translated_args = translate_list(args.args, ctx, ", ");
 
-                if translated_args == *"" {
-                    return translated.to_string();
+                    if translated_args == *"" {
+                        return translated.to_string();
+                    }
+
+                    return format!("{}[{}]", translated, translated_args);
                 }
 
-                format!("{}[{}]", translated, translated_args)
+                translated.to_string()
             }
             None => translated.to_string(),
         }

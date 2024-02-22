@@ -22,11 +22,6 @@ pub const VALUES: &str = "
 
 pub const INITIALIZERS: &str = "
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
-  pure val deps_val = {
-    storage: \"TODO\",
-    api: \"TODO\",
-    querier: \"TODO\"
-  }
 
   val env_val = { block: { time: time } }
 
@@ -46,7 +41,7 @@ pub const ACTIONS: &str = "
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    val r = execute(contract_state, deps_val, env_val, info, message)
+    val r = execute(contract_state, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
       return' = r._1,
