@@ -4,6 +4,7 @@ use itertools::Itertools;
 use rustc_ast::LitKind;
 use rustc_hir::{TyKind, VariantData};
 use rustc_middle::ty::TyCtxt;
+use rustc_span::{symbol::Ident, Symbol};
 use std::iter::zip;
 
 pub trait Translatable {
@@ -23,9 +24,9 @@ pub fn missing_translation<T: Translatable + Debug>(item: T, descr: &str) -> Str
     format!("<missing-{descr}>")
 }
 
-impl Translatable for rustc_hir::PathSegment<'_> {
-    fn translate(&self, ctx: &mut Context) -> String {
-        let translated_segments: HashMap<&str, &str> = HashMap::from([
+impl Translatable for Ident {
+    fn translate(&self, _ctx: &mut Context) -> String {
+        let translated_segments: &HashMap<&str, &str> = &HashMap::from([
             ("Vec", "List"),
             ("String", "str"),
             ("Uint128", "int"),
@@ -40,12 +41,18 @@ impl Translatable for rustc_hir::PathSegment<'_> {
             ("_deps", "state"),
         ]);
 
-        let s = self.ident.as_str();
-        let translated = translated_segments.get(s).unwrap_or(&s);
+        let s = self.as_str();
+        translated_segments.get(s).unwrap_or(&s).to_string()
+    }
+}
+
+impl Translatable for rustc_hir::PathSegment<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let translated = self.ident.translate(ctx);
 
         match self.args {
             Some(args) => {
-                if ["List", "Set"].contains(translated) {
+                if ["List", "Set"].contains(&translated.as_str()) {
                     // FIXME: this should always happen after type-level polymorphism is implemented
                     let translated_args = translate_list(args.args, ctx, ", ");
 
@@ -98,7 +105,7 @@ impl Translatable for rustc_hir::Pat<'_> {
         match self.kind {
             rustc_hir::PatKind::Binding(_a, _id, name, _n) => name.as_str().to_string(),
             rustc_hir::PatKind::Path(qpath) => qpath.translate(ctx),
-            rustc_hir::PatKind::Struct(qpath, pat_fields, _) => {
+            rustc_hir::PatKind::Struct(qpath, _pat_fields, _) => {
                 format!("{}(__r)", qpath.translate(ctx))
             }
             _ => missing_translation(*self, "pattern"),
@@ -215,9 +222,10 @@ impl Translatable for rustc_hir::GenericArg<'_> {
 }
 
 impl Translatable for rustc_middle::ty::Ty<'_> {
-    fn translate(&self, _ctx: &mut Context) -> String {
+    fn translate(&self, ctx: &mut Context) -> String {
         // FIXME: This should be quite unstable, but I couldn't figure out how to navigate `ty` here
-        format!("{:#?}", self)
+        let var_name = &format!("{:#?}", self);
+        let name = var_name
             .split("::")
             .last()
             .unwrap()
@@ -226,8 +234,9 @@ impl Translatable for rustc_middle::ty::Ty<'_> {
             .unwrap()
             .split(')')
             .next()
-            .unwrap()
-            .to_string()
+            .unwrap();
+
+        Ident::with_dummy_span(Symbol::intern(name)).translate(ctx)
     }
 }
 impl Translatable for rustc_middle::ty::GenericArg<'_> {
@@ -304,12 +313,12 @@ pub struct Context<'tcx> {
 
 pub fn try_to_translate_state_var_info(ctx: &mut Context, body: rustc_hir::Body) -> Option<String> {
     if let rustc_hir::ExprKind::Call(expr, _) = body.value.kind {
-        if let rustc_hir::ExprKind::Path(rustc_hir::QPath::TypeRelative(ty, segment)) = expr.kind {
+        if let rustc_hir::ExprKind::Path(rustc_hir::QPath::TypeRelative(ty, _segment)) = expr.kind {
             // let method = segment.ident;
             // let method_args = segment.args;
             // println!("Method: {method} ({method_args:#?})");
             if let TyKind::Path(rustc_hir::QPath::Resolved(_, path)) = ty.kind {
-                if let rustc_hir::def::Res::Def(kind, def_id) = path.res {
+                if let rustc_hir::def::Res::Def(_kind, def_id) = path.res {
                     let crate_name = ctx.tcx.crate_name(def_id.krate);
                     if crate_name.as_str() != "cw_storage_plus" {
                         return None;
@@ -322,7 +331,7 @@ pub fn try_to_translate_state_var_info(ctx: &mut Context, body: rustc_hir::Body)
                     let def_id = expr.hir_id.owner.def_id; // def_id identifies the main function
 
                     let ty = ctx.tcx.typeck(def_id).node_type(expr.hir_id);
-                    if let rustc_type_ir::TyKind::FnDef(ty_def_id, generic_args) = ty.kind() {
+                    if let rustc_type_ir::TyKind::FnDef(_ty_def_id, generic_args) = ty.kind() {
                         // We need to look into the GenericArgs here (from FnDef)
                         // to annotate the quint state variable properly
 
@@ -501,7 +510,7 @@ impl Translatable for rustc_hir::Item<'_> {
                         format!("({{ {field_params} }})")
                     };
                     format!(
-                        "pure def {name}{sig} = ({body_value}, state)
+                        "  pure def {name}{sig} = ({body_value}, state)
                             
   action {name}_action = {{
     // TODO: Change next line according to fund expectations

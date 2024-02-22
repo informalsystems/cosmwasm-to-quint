@@ -198,7 +198,7 @@ fn translate_items(tcx: TyCtxt) -> TyCtxt {
         .map(|x| format!("{}: {}", x.0, x.1))
         .collect_vec()
         .join(",\n  ");
-    println!("type ContractState = {{\n  {contract_state}\n}}");
+    println!("type ContractState = {{\n  {contract_state}\n}}\n");
 
     let initializer = "pure val init_contract_state = {\n".to_string()
         + &ctx
