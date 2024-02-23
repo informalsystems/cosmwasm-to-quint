@@ -3,6 +3,7 @@
 #![feature(rustc_private)]
 
 pub mod boilerplate;
+pub mod nondet;
 pub mod state_extraction;
 pub mod translate;
 pub mod types;
@@ -200,22 +201,22 @@ fn translate_items(tcx: TyCtxt) -> TyCtxt {
         .map(|x| format!("{}: {}", x.0, x.1))
         .collect_vec()
         .join(",\n  ");
-    println!("type ContractState = {{\n  {contract_state}\n}}\n");
+    println!("  type ContractState = {{\n    {contract_state}\n  }}\n");
 
-    let initializer = "pure val init_contract_state = {\n".to_string()
+    let initializer = "  pure val init_contract_state = {\n".to_string()
         + &ctx
             .contract_state
             .iter()
             .map(|field| {
                 format!(
-                    "  {}: {}\n",
+                    "    {}: {}",
                     field.0,
                     init_value_for_type(&ctx, field.1.clone())
                 )
             })
             .collect_vec()
             .join(",\n")
-        + "}";
+        + "\n  }";
     println!("{initializer}");
 
     let actions = ctx
@@ -248,8 +249,8 @@ fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     print!("{VARS}");
     print!("{CONTRACT_ADDRESS}");
     print!("{VALUES}");
+    translate_items(tcx);
     print!("{INITIALIZERS}");
     print!("{ACTIONS}");
-    translate_items(tcx);
     println!("}}");
 }

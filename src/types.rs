@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use rustc_middle::ty::TyCtxt;
+use rustc_span::symbol::Ident;
 
 #[derive(Clone, Debug)]
 pub struct Field {
@@ -25,4 +26,12 @@ pub struct Context<'tcx> {
     pub current_item_name: String,
     pub tcx: TyCtxt<'tcx>,
     pub contract_state: Vec<(String, String)>,
+}
+
+pub fn fallback_constructor(name: Ident) -> Constructor {
+    eprintln!("No message type for action: {name}");
+    Constructor {
+        name: format!("ConstructorFor{}", name.as_str()),
+        fields: vec![],
+    }
 }

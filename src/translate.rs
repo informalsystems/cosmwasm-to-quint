@@ -7,8 +7,9 @@ use rustc_span::symbol::Ident;
 use std::iter::zip;
 
 use crate::{
+    nondet::NondetValue,
     state_extraction::try_to_translate_state_var_info,
-    types::{Constructor, Context, Field},
+    types::{fallback_constructor, Constructor, Context, Field},
 };
 
 pub trait Translatable {
@@ -180,7 +181,7 @@ impl Translatable for rustc_hir::Expr<'_> {
                 }
 
                 format!(
-                    "match {} {{\n{}}}",
+                    "match {} {{\n{}\n  }}",
                     match_expr,
                     translate_list(arm, ctx, "\n")
                 )
@@ -214,7 +215,7 @@ impl Translatable for rustc_hir::Arm<'_> {
             expr.clone().split('(').next().unwrap().to_string(),
             pat.clone().split('(').next().unwrap().to_string(),
         );
-        format!("  | {} => {}", pat, expr)
+        format!("    | {} => {}", pat, expr)
     }
 }
 
@@ -305,9 +306,6 @@ impl Translatable for rustc_hir::Variant<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         let ident = self.ident;
         let qualified_ident = format!("{}_{ident}", ctx.current_item_name);
-        if self.data.fields().is_empty() {
-            return format!("  | {qualified_ident}");
-        }
         let fields = get_variant_fields(ctx, self.data);
         ctx.constructors.insert(
             qualified_ident.clone(),
@@ -316,7 +314,10 @@ impl Translatable for rustc_hir::Variant<'_> {
                 fields: fields.clone(),
             },
         );
-        format!("  | {qualified_ident}({{ {} }})", format_fields(fields))
+        if self.data.fields().is_empty() {
+            return format!("    | {qualified_ident}");
+        }
+        format!("    | {qualified_ident}({{ {} }})", format_fields(fields))
     }
 }
 
@@ -387,7 +388,7 @@ impl Translatable for rustc_hir::Item<'_> {
                         "".to_string()
                     }
                     None => {
-                        format!("pure val {name} = {}", const_item.value.translate(ctx))
+                        format!("  pure val {name} = {}", const_item.value.translate(ctx))
                         // if !const_item.params.is_empty() {
                         //     format!("{}", translate_list(const_item.params, ctx, ", "))
                         // }
@@ -398,74 +399,60 @@ impl Translatable for rustc_hir::Item<'_> {
             rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
                 let body = ctx.tcx.hir().body(body_id);
                 let (sig, has_state) = translate_fn_decl(ctx, *sig.decl, *body);
-
                 let body_value = body.value.translate(ctx);
-                let empty_vec = vec![];
-                // FIXME: We need to do something about instantiate
-                if has_state && name.as_str() != "execute" && name.as_str() != "instantiate" {
-                    let (message_type, fields) =
-                        match ctx.message_type_for_action.get(&name.to_string()) {
-                            Some(s) => (
-                                s.clone(),
-                                ctx.constructors
-                                    .get(s)
-                                    .map(|x| &x.fields)
-                                    .unwrap_or(&empty_vec),
-                            ),
-                            None => (format!("MessageFor{}", name), &empty_vec),
-                        };
-                    let values_for_fields = fields
-                        .iter()
-                        .map(|field| field.nondet_value.clone())
-                        .collect_vec()
-                        .join("\n  ");
-                    let field_params = fields
-                        .iter()
-                        .map(|field| {
-                            let name = field.name.clone();
-                            format!("{name}: {name}")
-                        })
-                        .collect_vec()
-                        .join(", ");
-                    let msg_params = if fields.is_empty() {
-                        "".to_string()
-                    } else {
-                        format!("({{ {field_params} }})")
-                    };
-                    format!(
-                        "  pure def {name}{sig} = ({body_value}, state)
+
+                if !has_state || name.as_str() == "execute" {
+                    // Direct translation for non-stateful functions (i.e.
+                    // helpers) Also for execute, since it's a special case - it
+                    // has a match statement to call other actions. Excute is
+                    // always called from `execute_message` from the boilerplate
+                    // part
+                    return format!("  pure def {name}{sig} = {body_value}");
+                }
+
+                if name.as_str() == "instantiate" {
+                    // FIXME: We need to do something about instantiate
+                    // Instantiate is a stateful function (taking state as an
+                    // argument and returning it) But currently we don't call it
+                    // in the state machine (from `step`). We probably need to
+                    // update the boilerplate stuff to call it.
+                    return format!("  pure def {name}{sig} = ({body_value}, state)");
+                }
+
+                let ctor: Constructor = ctx
+                    .message_type_for_action
+                    .get(&name.to_string())
+                    .and_then(|s| ctx.constructors.get(s).cloned())
+                    .unwrap_or_else(|| fallback_constructor(name));
+
+                let nondet_value = ctor.nondet_value(ctx, "message");
+
+                format!(
+                    "  pure def {name}{sig} = ({body_value}, state)
                             
   action {name}_action = {{
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-  
-    {values_for_fields}
-    pure val message = {message_type}{msg_params}
-  
+    {nondet_value}
     execute_message(message, max_funds)
   }}"
-                    )
-                } else if name.as_str() == "instantiate" {
-                    format!("pure def {name}{sig} = ({body_value}, state)")
-                } else {
-                    format!("pure def {name}{sig} = {body_value}")
-                }
+                )
             }
             rustc_hir::ItemKind::Struct(variant_data, _generics) => {
                 let fields = get_variant_fields(ctx, variant_data);
                 ctx.structs
                     .insert(name.as_str().to_string(), fields.clone());
                 let formatted_fields = format_fields(fields);
-                format!("type {name} = {{ {formatted_fields} }}")
+                format!("  type {name} = {{ {formatted_fields} }}")
             }
 
             rustc_hir::ItemKind::Enum(enum_def, _generics) => {
-                format!("type {name} =\n{}", enum_def.translate(ctx))
+                format!("  type {name} =\n{}", enum_def.translate(ctx))
             }
             // Safely ignore import-related things
-            rustc_hir::ItemKind::Mod(_) => "".to_string(),
-            rustc_hir::ItemKind::Use(_, _) => "".to_string(),
-            rustc_hir::ItemKind::ExternCrate(_) => "".to_string(),
+            rustc_hir::ItemKind::Mod(..) => "".to_string(),
+            rustc_hir::ItemKind::Use(..) => "".to_string(),
+            rustc_hir::ItemKind::ExternCrate(..) => "".to_string(),
             _ => missing_translation(*self, "item"),
         }
     }
