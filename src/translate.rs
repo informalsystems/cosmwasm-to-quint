@@ -335,6 +335,11 @@ impl Translatable for Function<'_> {
 
         let output = self.decl.output.translate(ctx);
 
+        if output == "void" {
+            // No point translating functions that don't return, since quint doesn't have side effects
+            return "".to_string();
+        }
+
         if has_state {
             ctx.stateful_ops.push(ctx.current_item_name.clone());
 
@@ -385,6 +390,10 @@ impl Translatable for rustc_hir::Item<'_> {
                     body: *body,
                 };
                 let sig = function.translate(ctx);
+                if sig.is_empty() {
+                    return "".to_string();
+                }
+
                 let has_state = ctx.stateful_ops.contains(&name.to_string());
                 let body_value = body.value.translate(ctx);
 
@@ -438,9 +447,10 @@ impl Translatable for rustc_hir::Item<'_> {
             rustc_hir::ItemKind::Enum(enum_def, _generics) => {
                 format!("  type {name} =\n{}", enum_def.translate(ctx))
             }
-            // Safely ignore import-related things
-            rustc_hir::ItemKind::Mod(..) => "".to_string(),
+            // FIXME: We should translate this (at least Use) into imports.
+            // This is only necessary for crates that import things from other crates
             rustc_hir::ItemKind::Use(..) => "".to_string(),
+            rustc_hir::ItemKind::Mod(..) => "".to_string(),
             rustc_hir::ItemKind::ExternCrate(..) => "".to_string(),
             _ => missing_translation(*self, "item"),
         }

@@ -29,7 +29,7 @@ use translate::Translatable;
 
 use crate::types::{Constructor, Context};
 
-use crate::boilerplate::{ACTIONS, CONTRACT_ADDRESS, IMPORTS, INITIALIZERS, VALUES, VARS};
+use crate::boilerplate::{post_items, pre_items};
 
 // This struct is the plugin provided to the rustc_plugin framework,
 // and it must be exported for use by the CLI/driver binaries.
@@ -113,46 +113,6 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
     }
 }
 
-fn init_value_for_type(ctx: &Context, ty: String) -> String {
-    let map_parts = ty.split("->").collect_vec();
-    if map_parts.len() > 1 {
-        return "Map()".to_string();
-    }
-
-    if ctx.structs.contains_key(&ty) {
-        // Type is a struct, initialize fields recursively
-        let fields = ctx.structs.get(&ty).unwrap();
-        let struct_value = fields
-            .iter()
-            .map(|field| {
-                format!(
-                    "{}: {}",
-                    field.name,
-                    init_value_for_type(ctx, field.ty.clone())
-                )
-            })
-            .collect_vec()
-            .join(",");
-        return format!("{{ {} }}", struct_value);
-    }
-
-    // Type is a primitive, return a default value
-    let init_values_by_type: HashMap<&str, &str> = HashMap::from([
-        ("List", "List()"),
-        ("str", "\"\""),
-        ("int", "0"),
-        ("Addr", "\"s1\""),
-    ]);
-
-    init_values_by_type
-        .get(ty.as_str())
-        .unwrap_or_else(|| {
-            eprintln!("No init value for type: {ty}");
-            &"<missing-type>"
-        })
-        .to_string()
-}
-
 fn translation_priority(item: &rustc_hir::Item<'_>) -> i32 {
     match item.kind {
         rustc_hir::ItemKind::Struct(..) => 1,
@@ -162,21 +122,20 @@ fn translation_priority(item: &rustc_hir::Item<'_>) -> i32 {
     }
 }
 
-fn visit_item(ctx: &mut Context, item: rustc_hir::Item) {
-    let translation = item.translate(ctx);
-    if !translation.is_empty() {
-        println!("{}\n", translation);
-    }
-}
-
-fn get_sorted_items(tcx: TyCtxt) -> impl Iterator<Item = &rustc_hir::Item<'_>> {
-    tcx.hir()
+fn translate_all_items(tcx: TyCtxt) {
+    let items_by_crate = tcx
+        .hir()
         .items()
         .map(|item_id| tcx.hir().item(item_id))
-        .sorted_by(|a, b| translation_priority(a).cmp(&translation_priority(b)))
+        .group_by(|item| item.hir_id().owner.def_id.to_def_id().krate);
+
+    items_by_crate.into_iter().for_each(|(crate_id, items)| {
+        let crate_name = tcx.crate_name(crate_id);
+        traslate_items(tcx, crate_name.as_str(), items.collect_vec())
+    });
 }
 
-fn translate_items(tcx: TyCtxt) -> TyCtxt {
+fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     let mut ctx = Context {
         tcx,
         message_type_for_action: HashMap::from([(
@@ -201,67 +160,27 @@ fn translate_items(tcx: TyCtxt) -> TyCtxt {
     };
 
     // Sort items by translation priority
-    let items = get_sorted_items(tcx);
-    items.for_each(|item| visit_item(&mut ctx, *item));
-
-    // After all items were visited, we can produce the complete contract state type
-    let contract_state = ctx
-        .contract_state
+    let translated_items = items
         .iter()
-        .map(|x| format!("{}: {}", x.0, x.1))
+        .sorted_by(|a, b| translation_priority(a).cmp(&translation_priority(b)))
+        .map(|item| item.translate(&mut ctx))
+        .filter(|translation| !translation.is_empty())
         .collect_vec()
-        .join(",\n  ");
-    println!("  type ContractState = {{\n    {contract_state}\n  }}\n");
+        .join("\n");
 
-    // After all items were visited, we can produce the complete contract state initializer
-    let initializer = "  pure val init_contract_state = {\n".to_string()
-        + &ctx
-            .contract_state
-            .iter()
-            .map(|field| {
-                format!(
-                    "    {}: {}",
-                    field.0,
-                    init_value_for_type(&ctx, field.1.clone())
-                )
-            })
-            .collect_vec()
-            .join(",\n")
-        + "\n  }";
-    println!("{initializer}");
+    if ctx.contract_state.is_empty() {
+        eprintln!("No contract state found for crate: {crate_name}. Skipping.");
+        return;
+    }
 
-    let actions = ctx
-        .stateful_ops
-        .iter()
-        .filter(|op| *op != &"execute".to_string() && *op != &"instantiate".to_string())
-        .map(|op| format!("{op}_action"))
-        .collect_vec()
-        .join(",\n      ");
-    println!(
-        "
-  action execute_step = all {{
-    any {{
-      {actions}
-    }},
-    advance_time,
-    bank' = bank,
-  }}
-"
-    );
-    tcx
+    println!("{}", pre_items(crate_name));
+    println!("{}", translated_items);
+    println!("{}", post_items(&ctx));
 }
 
 // The core of our analysis. It doesn't do much, just access some methods on the `TyCtxt`.
 // I recommend reading the Rustc Development Guide to better understand which compiler APIs
 // are relevant to whatever task you have.
 fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
-    println!("module generated {{");
-    print!("{IMPORTS}");
-    print!("{VARS}");
-    print!("{CONTRACT_ADDRESS}");
-    print!("{VALUES}");
-    translate_items(tcx);
-    print!("{INITIALIZERS}");
-    print!("{ACTIONS}");
-    println!("}}");
+    translate_all_items(tcx);
 }

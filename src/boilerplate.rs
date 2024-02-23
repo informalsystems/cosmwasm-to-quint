@@ -1,3 +1,9 @@
+use std::collections::HashMap;
+
+use itertools::Itertools;
+
+use crate::types::Context;
+
 pub const IMPORTS: &str = "
   import cw_types.* from \"../lib/cw_types\"
   import bank from \"../lib/bank\"
@@ -71,3 +77,108 @@ pub const ACTIONS: &str = "
     }
   }
 ";
+
+pub fn pre_items(crate_name: &str) -> String {
+    format!(
+        "module {crate_name} {{
+  {IMPORTS}
+  {VARS}
+  {CONTRACT_ADDRESS}
+  {VALUES}
+"
+    )
+}
+
+fn init_value_for_type(ctx: &Context, ty: String) -> String {
+    if ty.contains("->") {
+        return "Map()".to_string();
+    }
+
+    if ctx.structs.contains_key(&ty) {
+        // Type is a struct, initialize fields recursively
+        let fields = ctx.structs.get(&ty).unwrap();
+        let struct_value = fields
+            .iter()
+            .map(|field| {
+                format!(
+                    "{}: {}",
+                    field.name,
+                    init_value_for_type(ctx, field.ty.clone())
+                )
+            })
+            .collect_vec()
+            .join(",");
+        return format!("{{ {} }}", struct_value);
+    }
+
+    // Type is a primitive, return a default value
+    let init_values_by_type: HashMap<&str, &str> = HashMap::from([
+        ("List", "List()"),
+        ("str", "\"\""),
+        ("int", "0"),
+        ("Addr", "\"s1\""),
+    ]);
+
+    init_values_by_type
+        .get(ty.as_str())
+        .unwrap_or_else(|| {
+            eprintln!("No init value for type: {ty}");
+            &"<missing-type>"
+        })
+        .to_string()
+}
+
+pub fn post_items(ctx: &Context) -> String {
+    // After all items were visited, we can produce the complete contract state type
+    let contract_state = ctx
+        .contract_state
+        .iter()
+        .map(|x| format!("{}: {}", x.0, x.1))
+        .collect_vec()
+        .join(",\n  ");
+
+    // After all items were visited, we can produce the complete contract state initializer
+    let initializer = ctx
+        .contract_state
+        .iter()
+        .map(|field| {
+            format!(
+                "    {}: {}",
+                field.0,
+                init_value_for_type(&ctx, field.1.clone())
+            )
+        })
+        .collect_vec()
+        .join(",\n");
+
+    let actions = ctx
+        .stateful_ops
+        .iter()
+        .filter(|op| *op != &"execute".to_string() && *op != &"instantiate".to_string())
+        .map(|op| format!("{op}_action"))
+        .collect_vec()
+        .join(",\n      ");
+
+    format!(
+        "
+  type ContractState = {{
+    {contract_state}
+  }}
+
+  pure val init_contract_state = {{
+    {initializer}
+  }}
+
+  action execute_step = all {{
+    any {{
+      {actions}
+    }},
+    advance_time,
+    bank' = bank,
+  }}
+
+{INITIALIZERS}
+{ACTIONS}
+}}"
+    )
+}
