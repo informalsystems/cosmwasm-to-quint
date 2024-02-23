@@ -169,6 +169,7 @@ fn visit_item(ctx: &mut Context, item: rustc_hir::Item) {
 
 fn translate_items(tcx: TyCtxt) -> TyCtxt {
     let mut ctx = Context {
+        tcx,
         message_type_for_action: HashMap::from([(
             "instantiate".to_string(),
             "InstantiateMsg".to_string(),
@@ -182,10 +183,12 @@ fn translate_items(tcx: TyCtxt) -> TyCtxt {
         )]),
         structs: HashMap::new(),
         stateful_ops: vec![],
-        record_fields: vec![],
-        current_item_name: "".to_string(),
-        tcx,
         contract_state: vec![],
+        // scoped
+        record_fields: vec![],
+        struct_fields: vec![],
+        pat_fields: vec![],
+        current_item_name: "".to_string(),
     };
 
     let items = tcx

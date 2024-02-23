@@ -9,7 +9,7 @@ use std::iter::zip;
 use crate::{
     nondet::NondetValue,
     state_extraction::try_to_translate_state_var_info,
-    types::{fallback_constructor, Constructor, Context, Field},
+    types::{fallback_constructor, Constructor, Context, Field, Function},
 };
 
 pub trait Translatable {
@@ -17,6 +17,14 @@ pub trait Translatable {
 }
 
 pub fn translate_list<T: Translatable>(items: &[T], ctx: &mut Context, sep: &str) -> String {
+    items
+        .iter()
+        .map(|x| x.translate(ctx))
+        .collect_vec()
+        .join(sep)
+}
+
+pub fn translate_vec<T: Translatable>(items: Vec<T>, ctx: &mut Context, sep: &str) -> String {
     items
         .iter()
         .map(|x| x.translate(ctx))
@@ -101,7 +109,9 @@ impl Translatable for rustc_hir::Ty<'_> {
 
 impl Translatable for rustc_hir::Param<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
-        self.pat.translate(ctx)
+        let param = self.pat.translate(ctx);
+        ctx.pat_fields.clear();
+        param
     }
 }
 
@@ -110,7 +120,16 @@ impl Translatable for rustc_hir::Pat<'_> {
         match self.kind {
             rustc_hir::PatKind::Binding(_a, _id, name, _n) => name.as_str().to_string(),
             rustc_hir::PatKind::Path(qpath) => qpath.translate(ctx),
-            rustc_hir::PatKind::Struct(qpath, _pat_fields, _) => {
+            rustc_hir::PatKind::Struct(qpath, pat_fields, _) => {
+                // TODO: raise error if pat != field (I think this is matching for {field_ident: field_pat})
+                // let field_pat = translate_pat(*field.pat);
+
+                let fields = pat_fields
+                    .iter()
+                    .map(|field| field.ident.to_string())
+                    .collect_vec();
+                ctx.pat_fields.extend(fields.clone());
+
                 format!("{}(__r)", qpath.translate(ctx))
             }
             _ => missing_translation(*self, "pattern"),
@@ -197,7 +216,8 @@ impl Translatable for rustc_hir::Expr<'_> {
 impl Translatable for rustc_hir::Arm<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         let pat = self.pat.translate(ctx);
-        let fields = get_pat_fields(*self.pat);
+        let fields = ctx.pat_fields.clone();
+        ctx.pat_fields.clear();
         // Put fields in context so they are translated as __r.field
         ctx.record_fields.extend(fields.clone());
         let expr = self.body.translate(ctx);
@@ -229,71 +249,31 @@ impl Translatable for rustc_hir::GenericArg<'_> {
     }
 }
 
-fn get_pat_fields(pat: rustc_hir::Pat) -> Vec<String> {
-    match pat.kind {
-        // TODO: raise error if pat != field (I think this is matching for {field_ident: field_pat})
-        // let field_pat = translate_pat(*field.pat);
-        rustc_hir::PatKind::Struct(_, pat_fields, _) => pat_fields
+impl Translatable for VariantData<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let fields = self
+            .fields()
             .iter()
-            .map(|field| field.ident.to_string())
-            .collect_vec(),
-        _ => vec![],
+            .map(|field| {
+                let field_ident = field.ident.to_string();
+                Field {
+                    name: field_ident.clone(),
+                    ty: field.ty.translate(ctx),
+                    nondet_value: field.ty.nondet_value(ctx, &field_ident),
+                }
+            })
+            .collect_vec();
+
+        ctx.struct_fields.extend(fields.clone());
+
+        translate_vec(fields, ctx, ", ")
     }
 }
 
-pub fn nondet_value_for_type(ident: String, ty: String) -> String {
-    let nondet_values_by_type = HashMap::from([
-        ("str", "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string()),
-        ("int", "0.to(MAX_AMOUNT).oneOf()".to_string()),
-        // TODO list for other types
-    ]);
-    if ty == "List[int]" {
-        // FIXME make this work with all types
-        return format!(
-            "
-    val possibilities = 1.to(10).map(i => SomeInt(i)).union(Set(NoneInt))
-    nondet v1 = possibilities.oneOf()
-    nondet v2 = possibilities.oneOf()
-    nondet v3 = possibilities.oneOf()
-    val {ident}: {ty} = [v1, v2, v3].foldl([], (acc, v) => match v {{
-      | SomeInt(i) => acc.append(i)
-      | NoneInt => acc
-    }})
-"
-        );
+impl Translatable for Field {
+    fn translate(&self, _ctx: &mut Context) -> String {
+        format!("{}: {}", self.name, self.ty)
     }
-    format!(
-        "nondet {}: {} = {}",
-        ident,
-        ty,
-        nondet_values_by_type
-            .get(ty.as_str())
-            .unwrap_or(&format!("nondet_value_for_type({ty})"))
-    )
-}
-
-pub fn get_variant_fields(ctx: &mut Context, variant_data: VariantData) -> Vec<Field> {
-    variant_data
-        .fields()
-        .iter()
-        .map(|field| {
-            let field_ident = field.ident.to_string();
-            let field_type = field.ty.translate(ctx);
-            Field {
-                name: field_ident.clone(),
-                ty: field_type.clone(),
-                nondet_value: nondet_value_for_type(field_ident.clone(), field_type),
-            }
-        })
-        .collect_vec()
-}
-
-pub fn format_fields(fields: Vec<Field>) -> String {
-    fields
-        .iter()
-        .map(|x| format!("{}: {}", x.name, x.ty))
-        .collect_vec()
-        .join(", ")
 }
 
 impl Translatable for rustc_hir::EnumDef<'_> {
@@ -306,18 +286,24 @@ impl Translatable for rustc_hir::Variant<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         let ident = self.ident;
         let qualified_ident = format!("{}_{ident}", ctx.current_item_name);
-        let fields = get_variant_fields(ctx, self.data);
+        let translated_fields = self.data.translate(ctx);
+
+        let fields = ctx.struct_fields.clone();
+        ctx.struct_fields.clear();
+
         ctx.constructors.insert(
             qualified_ident.clone(),
             Constructor {
                 name: qualified_ident.clone(),
-                fields: fields.clone(),
+                fields,
             },
         );
+
         if self.data.fields().is_empty() {
-            return format!("    | {qualified_ident}");
+            format!("    | {qualified_ident}")
+        } else {
+            format!("    | {qualified_ident}({{ {translated_fields} }})",)
         }
-        format!("    | {qualified_ident}({{ {} }})", format_fields(fields))
     }
 }
 
@@ -330,53 +316,54 @@ impl Translatable for rustc_hir::FnRetTy<'_> {
     }
 }
 
-pub fn translate_fn_decl(
-    ctx: &mut Context,
-    decl: rustc_hir::FnDecl,
-    body: rustc_hir::Body,
-) -> (String, bool) {
-    let param_tuples = zip(decl.inputs, body.params);
-    let input = param_tuples
-        .map(|(input, param)| {
-            let translated_param = param.translate(ctx);
-            let translated_type = input.translate(ctx);
-            if translated_type == "ContractState" {
-                ctx.stateful_ops.push(ctx.current_item_name.clone());
-                return "state: ContractState".to_string();
-            }
-            format!("{}: {}", translated_param, translated_type)
-        })
-        .collect_vec()
-        .join(", ");
+impl Translatable for Function<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        // If one of the params is of type Deps or DepsMut, and the return type is "Result", this is a state transformer,
+        // and therefore should take the state as an argument and return it
+        let mut has_state = false;
 
-    let output = decl.output.translate(ctx);
+        let param_tuples = zip(self.decl.inputs, self.body.params);
+        let input = param_tuples
+            .map(|(input, param)| {
+                let translated_param = param.translate(ctx);
+                let translated_type = input.translate(ctx);
+                if translated_type == "ContractState" {
+                    has_state = true;
+                    return "state: ContractState".to_string();
+                }
+                format!("{}: {}", translated_param, translated_type)
+            })
+            .collect_vec()
+            .join(", ");
 
-    // If one of the params is of type Deps or DepsMut, and the return type is "Result", this is a state transformer,
-    // and therefore should take the state as an argument and return it
-    if input.contains("ContractState") && output.contains("Result") {
-        let ret = format!("({input}): ({output}, ContractState)");
-        return (ret, true);
+        let output = self.decl.output.translate(ctx);
+
+        if has_state {
+            ctx.stateful_ops.push(ctx.current_item_name.clone());
+
+            format!("({input}): ({output}, ContractState)")
+        } else {
+            format!("({}): {}", input, output)
+        }
     }
-
-    let ret = format!("({}): {}", input, output);
-    (ret, false)
-}
-pub fn should_skip(name: &str) -> bool {
-    name.starts_with('_')
-      || ["", "FIELDS", "VARIANTS"].contains(&name)
-      || name.starts_with("query") // skip query functions for now
-      || name.starts_with("Query")
-      || name.starts_with("ContractError")
-      || name.starts_with("get_")
 }
 
 impl Translatable for rustc_hir::Item<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
-        let name = self.ident;
-        if should_skip(name.as_str()) {
+        let name = self.ident.as_str();
+
+        if name.starts_with('_')
+          || ["", "FIELDS", "VARIANTS"].contains(&name)
+          || name.starts_with("query") // skip query functions for now
+          || name.starts_with("Query")
+          || name.starts_with("ContractError")
+          || name.starts_with("get_")
+        {
+            // skip irrelevant items
             return "".to_string();
         }
-        ctx.current_item_name = name.as_str().to_string();
+
+        ctx.current_item_name = name.to_string();
 
         match self.kind {
             rustc_hir::ItemKind::Const(_ty, _generics, body) => {
@@ -384,7 +371,7 @@ impl Translatable for rustc_hir::Item<'_> {
                 match try_to_translate_state_var_info(ctx, *const_item) {
                     Some(ret) => {
                         ctx.contract_state
-                            .push((name.as_str().to_string().to_lowercase(), ret));
+                            .push((name.to_string().to_lowercase(), ret));
                         "".to_string()
                     }
                     None => {
@@ -398,10 +385,15 @@ impl Translatable for rustc_hir::Item<'_> {
 
             rustc_hir::ItemKind::Fn(sig, _generics, body_id) => {
                 let body = ctx.tcx.hir().body(body_id);
-                let (sig, has_state) = translate_fn_decl(ctx, *sig.decl, *body);
+                let function = Function {
+                    decl: *sig.decl,
+                    body: *body,
+                };
+                let sig = function.translate(ctx);
+                let has_state = ctx.stateful_ops.contains(&name.to_string());
                 let body_value = body.value.translate(ctx);
 
-                if !has_state || name.as_str() == "execute" {
+                if !has_state || name == "execute" {
                     // Direct translation for non-stateful functions (i.e.
                     // helpers) Also for execute, since it's a special case - it
                     // has a match statement to call other actions. Excute is
@@ -410,7 +402,7 @@ impl Translatable for rustc_hir::Item<'_> {
                     return format!("  pure def {name}{sig} = {body_value}");
                 }
 
-                if name.as_str() == "instantiate" {
+                if name == "instantiate" {
                     // FIXME: We need to do something about instantiate
                     // Instantiate is a stateful function (taking state as an
                     // argument and returning it) But currently we don't call it
@@ -439,11 +431,13 @@ impl Translatable for rustc_hir::Item<'_> {
                 )
             }
             rustc_hir::ItemKind::Struct(variant_data, _generics) => {
-                let fields = get_variant_fields(ctx, variant_data);
-                ctx.structs
-                    .insert(name.as_str().to_string(), fields.clone());
-                let formatted_fields = format_fields(fields);
-                format!("  type {name} = {{ {formatted_fields} }}")
+                let translated_fields = variant_data.translate(ctx);
+                let fields = ctx.struct_fields.clone();
+                ctx.struct_fields.clear();
+
+                ctx.structs.insert(name.to_string(), fields);
+
+                format!("  type {name} = {{ {translated_fields} }}")
             }
 
             rustc_hir::ItemKind::Enum(enum_def, _generics) => {
