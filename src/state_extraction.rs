@@ -47,10 +47,8 @@ pub fn try_to_translate_state_var_info(ctx: &mut Context, body: rustc_hir::Body)
 
                     // if crate name is `cw_storage_plus`, we need to translate
                     // this into part of the contract state
-                    // ------------
 
-                    let def_id = expr.hir_id.owner.def_id; // def_id identifies the main function
-
+                    let def_id = expr.hir_id.owner.def_id; 
                     let ty = ctx.tcx.typeck(def_id).node_type(expr.hir_id);
                     if let rustc_type_ir::TyKind::FnDef(_ty_def_id, generic_args) = ty.kind() {
                         // We need to look into the GenericArgs here (from FnDef)
@@ -58,7 +56,6 @@ pub fn try_to_translate_state_var_info(ctx: &mut Context, body: rustc_hir::Body)
 
                         let translated_types =
                             generic_args.iter().map(|t| t.translate(ctx)).collect_vec();
-                        // segment_to_string(path.segments);
 
                         // For Map::new, the 2nd and 3rd generics are the map types
                         // For Item::new, the 2nd generic is the type
