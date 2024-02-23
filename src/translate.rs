@@ -141,8 +141,7 @@ impl Translatable for LitKind {
     fn translate(&self, _ctx: &mut Context) -> String {
         match self {
             LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
-                let ret = format!("\"{}\"", sym.as_str());
-                ret
+                format!("\"{}\"", sym.as_str())
             }
             LitKind::Int(i, _) => i.to_string(),
             _ => missing_translation(self.clone(), "literal"),
@@ -165,13 +164,11 @@ impl Translatable for rustc_hir::Expr<'_> {
             rustc_hir::ExprKind::Call(op, args) => {
                 let operator = op.translate(ctx);
                 if operator == "int_new" {
+                    // Some Uint-like constructors will be translated to this, but we just need the literal
                     return args[0].translate(ctx);
                 }
+
                 let arguments = translate_list(args, ctx, ", ");
-                if ctx.stateful_ops.contains(&operator) {
-                    // If this is a stateful operation, we need to add the state as the first argument
-                    return format!("{}(state, {})", operator, arguments);
-                }
                 if arguments.is_empty() {
                     // Quint doesn't have nullary operators
                     return operator;
@@ -368,6 +365,7 @@ impl Translatable for rustc_hir::Item<'_> {
         match self.kind {
             rustc_hir::ItemKind::Const(_ty, _generics, body) => {
                 let const_item = ctx.tcx.hir().body(body);
+                // TODO consider const_item.params
                 match try_to_translate_state_var_info(ctx, *const_item) {
                     Some(ret) => {
                         ctx.contract_state
@@ -376,9 +374,6 @@ impl Translatable for rustc_hir::Item<'_> {
                     }
                     None => {
                         format!("  pure val {name} = {}", const_item.value.translate(ctx))
-                        // if !const_item.params.is_empty() {
-                        //     format!("{}", translate_list(const_item.params, ctx, ", "))
-                        // }
                     }
                 }
             }

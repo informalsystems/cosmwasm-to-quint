@@ -120,6 +120,7 @@ fn init_value_for_type(ctx: &Context, ty: String) -> String {
     }
 
     if ctx.structs.contains_key(&ty) {
+        // Type is a struct, initialize fields recursively
         let fields = ctx.structs.get(&ty).unwrap();
         let struct_value = fields
             .iter()
@@ -135,6 +136,7 @@ fn init_value_for_type(ctx: &Context, ty: String) -> String {
         return format!("{{ {} }}", struct_value);
     }
 
+    // Type is a primitive, return a default value
     let init_values_by_type: HashMap<&str, &str> = HashMap::from([
         ("List", "List()"),
         ("str", "\"\""),
@@ -167,6 +169,13 @@ fn visit_item(ctx: &mut Context, item: rustc_hir::Item) {
     }
 }
 
+fn get_sorted_items(tcx: TyCtxt) -> impl Iterator<Item = &rustc_hir::Item<'_>> {
+    tcx.hir()
+        .items()
+        .map(|item_id| tcx.hir().item(item_id))
+        .sorted_by(|a, b| translation_priority(a).cmp(&translation_priority(b)))
+}
+
 fn translate_items(tcx: TyCtxt) -> TyCtxt {
     let mut ctx = Context {
         tcx,
@@ -191,13 +200,11 @@ fn translate_items(tcx: TyCtxt) -> TyCtxt {
         current_item_name: "".to_string(),
     };
 
-    let items = tcx
-        .hir()
-        .items()
-        .map(|item_id| tcx.hir().item(item_id))
-        .sorted_by(|a, b| translation_priority(a).cmp(&translation_priority(b)));
+    // Sort items by translation priority
+    let items = get_sorted_items(tcx);
     items.for_each(|item| visit_item(&mut ctx, *item));
 
+    // After all items were visited, we can produce the complete contract state type
     let contract_state = ctx
         .contract_state
         .iter()
@@ -206,6 +213,7 @@ fn translate_items(tcx: TyCtxt) -> TyCtxt {
         .join(",\n  ");
     println!("  type ContractState = {{\n    {contract_state}\n  }}\n");
 
+    // After all items were visited, we can produce the complete contract state initializer
     let initializer = "  pure val init_contract_state = {\n".to_string()
         + &ctx
             .contract_state
