@@ -89,6 +89,7 @@ pub fn pre_items(crate_name: &str) -> String {
     )
 }
 
+// TODO: This doesn't belong here, but I'm not sure where to put it
 fn init_value_for_type(ctx: &Context, ty: String) -> String {
     if ty.contains("->") {
         return "Map()".to_string();
@@ -145,7 +146,7 @@ pub fn post_items(ctx: &Context) -> String {
             format!(
                 "    {}: {}",
                 field.0,
-                init_value_for_type(&ctx, field.1.clone())
+                init_value_for_type(ctx, field.1.clone())
             )
         })
         .collect_vec()

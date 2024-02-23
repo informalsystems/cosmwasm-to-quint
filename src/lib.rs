@@ -170,6 +170,7 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
 
     if ctx.contract_state.is_empty() {
         eprintln!("No contract state found for crate: {crate_name}. Skipping.");
+        // FIXME: this should be translated into a stateless module
         return;
     }
 
