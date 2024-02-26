@@ -1,0 +1,13 @@
+[package]
+name = "cosmwasm-to-quint"
+version = "0.2.0"
+edition = "2021"
+
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[dependencies]
+rustc_plugin = "0.8.0-nightly-2024-01-06"
+env_logger = "0.10"
+clap = {version = "4.4", features = ["derive"]}
+serde = {version = "1", features = ["derive"]}
