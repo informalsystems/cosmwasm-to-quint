@@ -153,7 +153,8 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
         current_item_name: "".to_string(),
     };
 
-    // Sort items by translation priority
+    // Iterate over all crate items, sorted by translation priority, translating
+    // each one and filtering out empty translations (i.e. from ignored items)
     let translated_items = items
         .iter()
         .sorted_by(|a, b| translation_priority(a).cmp(&translation_priority(b)))
