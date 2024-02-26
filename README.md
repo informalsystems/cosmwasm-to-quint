@@ -7,7 +7,7 @@ This uses the crate `rustc_plugin` to generate quint code out of cosmwasm projec
 cargo install --path .
 ```
 
-Running this tool for a CosmWasm contracts requires a simple `cargo` command, but you need to set some things up first. Make sure you are on the directory of your CosmWasm project an follow these steps:
+Running this tool for a CosmWasm contracts requires a simple `cargo` command, but you need to set some things up first. Make sure you are on the directory of your CosmWasm project and follow these steps:
 
 1. Setup `rustup` to use a `nightly` version compatible with compiler plugin libs
 
