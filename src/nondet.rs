@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
 
 use crate::translate::Translatable;
@@ -48,12 +46,6 @@ impl NondetValue for rustc_hir::Ty<'_> {
     fn nondet_value(&self, ctx: &mut Context, ident: &str) -> String {
         let ty = self.translate(ctx);
 
-        let nondet_values_by_type = HashMap::from([
-            ("str", "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string()),
-            ("int", "0.to(MAX_AMOUNT).oneOf()".to_string()),
-            ("bool", "Bool.oneOf()".to_string()),
-        ]);
-
         if ty == "List[int]" {
             // FIXME make this work with all types
             // Since Quint doesn't allow `oneOf` to be called on iterators, we generate a list of up to 3 elements.
@@ -72,14 +64,16 @@ impl NondetValue for rustc_hir::Ty<'_> {
             );
         }
 
-        // Form primitive types, we can use the predefined values
-        format!(
-            "nondet {}: {} = {}",
-            ident,
-            ty,
-            nondet_values_by_type
-                .get(ty.as_str())
-                .unwrap_or(&format!("nondet_value_for_type({ty})"))
-        )
+        let nondet_value = match ty.as_str() {
+            "str" => "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string(),
+            "int" => "0.to(MAX_AMOUNT).oneOf()".to_string(),
+            "bool" => "Bool.oneOf()".to_string(),
+            _ => {
+                eprintln!("No nondet value for type: {ty}");
+                "<missing-nondet-value>".to_string()
+            }
+        };
+
+        format!("nondet {}: {} = {}", ident, ty, nondet_value)
     }
 }

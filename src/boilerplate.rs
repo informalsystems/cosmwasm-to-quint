@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
 
 use crate::types::Context;
@@ -114,21 +112,16 @@ fn init_value_for_type(ctx: &Context, ty: String) -> String {
         return format!("{{ {} }}", struct_value);
     }
 
-    // Type is a primitive, return a default value
-    let init_values_by_type: HashMap<&str, &str> = HashMap::from([
-        ("List", "List()"),
-        ("str", "\"\""),
-        ("int", "0"),
-        ("Addr", "\"s1\""),
-    ]);
-
-    init_values_by_type
-        .get(ty.as_str())
-        .unwrap_or_else(|| {
+    match ty.as_str() {
+        "List" => "List()".to_string(),
+        "str" => "\"\"".to_string(),
+        "int" => "0".to_string(),
+        "Addr" => "\"s1\"".to_string(),
+        _ => {
             eprintln!("No init value for type: {ty}");
-            &"<missing-type>"
-        })
-        .to_string()
+            "<missing-type>".to_string()
+        }
+    }
 }
 
 pub fn post_items(ctx: &Context) -> String {
