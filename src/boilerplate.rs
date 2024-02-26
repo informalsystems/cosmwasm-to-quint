@@ -90,6 +90,8 @@ pub fn pre_items(crate_name: &str) -> String {
 }
 
 // TODO: This doesn't belong here, but I'm not sure where to put it
+/// Generates a default value for a given type, used to initialize values of all
+/// contract state fields
 fn init_value_for_type(ctx: &Context, ty: String) -> String {
     if ty.contains("->") {
         return "Map()".to_string();

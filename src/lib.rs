@@ -1,4 +1,4 @@
-//! A Rustc plugin that prints out the name of all items in a crate.
+//! A Rustc plugin that generates quint stubs out of CosmWasm Rust contracts.
 
 #![feature(rustc_private)]
 
@@ -35,13 +35,10 @@ use crate::boilerplate::{post_items, pre_items};
 // and it must be exported for use by the CLI/driver binaries.
 pub struct CosmwasmToQuintPlugin;
 
-// To parse CLI arguments, we use Clap for this example. But that
-// detail is up to you.
+// No plugin-specific args for now, but we'll use this to pass through
+// arguments to Cargo.
 #[derive(Parser, Serialize, Deserialize)]
 pub struct CosmwasmToQuintPluginArgs {
-    #[arg(short, long)]
-    caps: bool,
-
     #[clap(last = true)]
     cargo_args: Vec<String>,
 }
@@ -57,9 +54,6 @@ impl RustcPlugin for CosmwasmToQuintPlugin {
         "cosmwasm-to-quint-driver".into()
     }
 
-    // In the CLI, we ask Clap to parse arguments and also specify a CrateFilter.
-    // If one of the CLI arguments was a specific file to analyze, then you
-    // could provide a different filter.
     fn args(&self, _target_dir: &Utf8Path) -> RustcPluginArgs<Self::Args> {
         let args = CosmwasmToQuintPluginArgs::parse_from(env::args().skip(1));
         let filter = CrateFilter::AllCrates;
@@ -99,7 +93,7 @@ impl rustc_driver::Callbacks for CosmwasmToQuintCallbacks {
         queries: &'tcx rustc_interface::Queries<'tcx>,
     ) -> rustc_driver::Compilation {
         // We extract a key data structure, the `TyCtxt`, which is all we need
-        // for our simple task of printing out item names.
+        // for accessing the high-level IR and its types.
         queries
             .global_ctxt()
             .unwrap()
@@ -179,9 +173,7 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     println!("{}", post_items(&ctx));
 }
 
-// The core of our analysis. It doesn't do much, just access some methods on the `TyCtxt`.
-// I recommend reading the Rustc Development Guide to better understand which compiler APIs
-// are relevant to whatever task you have.
+// This is the main entry point for the plugin. It prints the generated quint code to STDOUT.
 fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     translate_all_items(tcx);
 }
