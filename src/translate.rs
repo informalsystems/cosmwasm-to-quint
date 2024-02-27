@@ -275,11 +275,33 @@ impl Translatable for rustc_hir::Expr<'_> {
                     translate_list(arm, ctx, "\n")
                 )
             }
+            rustc_hir::ExprKind::If(cond, then, else_) => {
+                let condition = cond.translate(ctx);
+                let then_expr = then.translate(ctx);
+                let else_expr = else_
+                    .map(|e| e.translate(ctx))
+                    .unwrap_or("<mandatory-else-branch>".to_string());
+
+                format!(
+                    "if ({}) {{\n  {}\n}} else {{\n  {}\n}}",
+                    condition, then_expr, else_expr
+                )
+            }
             rustc_hir::ExprKind::MethodCall(_, expr, _, _) => expr.translate(ctx),
+            rustc_hir::ExprKind::Closure(c) => c.translate(ctx),
             rustc_hir::ExprKind::DropTemps(expr) => expr.translate(ctx),
             rustc_hir::ExprKind::Field(expr, field) => format!("{}.{}", expr.translate(ctx), field),
             _ => missing_translation(*self, "expression"),
         }
+    }
+}
+
+impl Translatable for rustc_hir::Closure<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let body = ctx.tcx.hir().body(self.body);
+        let params = translate_list(body.params, ctx, ", ");
+        let expr = body.value.translate(ctx);
+        format!("({}) => {}", params, expr)
     }
 }
 
