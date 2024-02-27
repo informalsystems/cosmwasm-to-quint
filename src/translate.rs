@@ -1,8 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use itertools::Itertools;
-use rustc_ast::LitKind;
-use rustc_hir::{TyKind, VariantData};
 use rustc_span::symbol::Ident;
 use std::iter::zip;
 
@@ -341,24 +339,40 @@ impl Translatable for rustc_hir::GenericArg<'_> {
     }
 }
 
-impl Translatable for VariantData<'_> {
+impl Translatable for rustc_hir::VariantData<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
-        let fields = self
-            .fields()
-            .iter()
-            .map(|field| {
-                let field_ident = field.ident.to_string();
-                Field {
-                    name: field_ident.clone(),
-                    ty: field.ty.translate(ctx),
-                    nondet_value: field.ty.nondet_value(ctx, &field_ident),
+        match self {
+            rustc_hir::VariantData::Struct { fields, .. } => {
+                let translated_fields = fields
+                    .iter()
+                    .map(|field| {
+                        let field_ident = field.ident.to_string();
+                        Field {
+                            name: field_ident.clone(),
+                            ty: field.ty.translate(ctx),
+                            nondet_value: field.ty.nondet_value(ctx, &field_ident),
+                        }
+                    })
+                    .collect_vec();
+
+                ctx.struct_fields.extend(translated_fields.clone());
+
+                format!("{{ {} }}", translate_vec(translated_fields, ctx, ", "))
+            }
+            rustc_hir::VariantData::Tuple(fields, _, _) => {
+                let translated_fields = fields
+                    .iter()
+                    .map(|field| field.ty.translate(ctx))
+                    .collect_vec();
+
+                if translated_fields.len() == 1 {
+                    return translated_fields[0].clone();
                 }
-            })
-            .collect_vec();
 
-        ctx.struct_fields.extend(fields.clone());
-
-        translate_vec(fields, ctx, ", ")
+                format!("({})", translated_fields.join(", "))
+            }
+            rustc_hir::VariantData::Unit(..) => "".to_string(), // No fields to translate
+        }
     }
 }
 
@@ -370,6 +384,10 @@ impl Translatable for Field {
 
 impl Translatable for rustc_hir::EnumDef<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
+        if self.variants.is_empty() {
+            return "{}".to_string();
+        }
+
         translate_list(self.variants, ctx, "\n")
     }
 }
@@ -394,7 +412,7 @@ impl Translatable for rustc_hir::Variant<'_> {
         if self.data.fields().is_empty() {
             format!("    | {qualified_ident}")
         } else {
-            format!("    | {qualified_ident}({{ {translated_fields} }})",)
+            format!("    | {qualified_ident}({translated_fields})",)
         }
     }
 }
