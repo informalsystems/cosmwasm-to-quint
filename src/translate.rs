@@ -1,8 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use itertools::Itertools;
-use rustc_ast::LitKind;
-use rustc_hir::{TyKind, VariantData};
 use rustc_span::symbol::Ident;
 use std::iter::zip;
 
@@ -46,6 +44,7 @@ impl Translatable for Ident {
             ("Uint64", "int"),
             ("u128", "int"),
             ("u64", "int"),
+            ("Decimal", "int"),
             ("Timestamp", "int"),
             ("DepsMut", "ContractState"),
             ("Deps", "ContractState"),
@@ -65,12 +64,20 @@ impl Translatable for rustc_hir::PathSegment<'_> {
 
         match self.args {
             Some(args) => {
-                if ["List", "Set"].contains(&translated.as_str()) {
+                if ["List", "Set", "Option"].contains(&translated.as_str()) {
                     // FIXME: this should always happen after type-level polymorphism is implemented
                     let translated_args = translate_list(args.args, ctx, ", ");
 
                     if translated_args == *"" {
                         return translated.to_string();
+                    }
+
+                    if translated == "Option" {
+                        return match translated_args.as_str() {
+                            "int" => return "OptionalInt".to_string(),
+                            "str" => return "OptionalString".to_string(),
+                            s => format!("Optional{}", s),
+                        };
                     }
 
                     return format!("{}[{}]", translated, translated_args);
@@ -98,9 +105,24 @@ impl Translatable for rustc_hir::QPath<'_> {
 impl Translatable for rustc_hir::Ty<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         match self.kind {
-            TyKind::Path(qpath) => qpath.translate(ctx),
-            TyKind::Tup(tys) => {
+            rustc_hir::TyKind::Path(qpath) => qpath.translate(ctx),
+            rustc_hir::TyKind::Tup(tys) => {
                 format!("({})", translate_list(tys, ctx, ", "))
+            }
+            rustc_hir::TyKind::Array(ty, _) | rustc_hir::TyKind::Slice(ty) => {
+                format!("List[{}]", ty.translate(ctx))
+            }
+            rustc_hir::TyKind::Ref(_, rustc_hir::MutTy { ty, mutbl: _ }) => {
+                let t = ty.translate(ctx);
+
+                // FIXME: in full code generation, we should deal with this,
+                // i.e. by returning this type at the end along with the
+                // existing return
+                eprintln!(
+                    "Mutable types are not supported. Removed `mut` from {t}, in {}",
+                    ctx.current_item_name
+                );
+                t
             }
             _ => missing_translation(*self, "type"),
         }
@@ -132,19 +154,57 @@ impl Translatable for rustc_hir::Pat<'_> {
 
                 format!("{}(__r)", qpath.translate(ctx))
             }
+            rustc_hir::PatKind::TupleStruct(qpath, [pat], _) => {
+                // Only translate this for a single pattern - idk how to handle multiple patterns yet
+                format!("{}({})", qpath.translate(ctx), pat.translate(ctx))
+            }
+            rustc_hir::PatKind::Wild => "_".to_string(),
             _ => missing_translation(*self, "pattern"),
         }
     }
 }
 
-impl Translatable for LitKind {
+impl Translatable for rustc_ast::LitKind {
     fn translate(&self, _ctx: &mut Context) -> String {
         match self {
-            LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
+            rustc_ast::LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
                 format!("\"{}\"", sym.as_str())
             }
-            LitKind::Int(i, _) => i.to_string(),
+            rustc_ast::LitKind::Int(i, _) => i.to_string(),
+            rustc_ast::LitKind::Bool(v) => v.to_string(),
             _ => missing_translation(self.clone(), "literal"),
+        }
+    }
+}
+
+impl Translatable for rustc_hir::ExprField<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        format!(
+            "{}: {}",
+            self.ident.translate(ctx),
+            self.expr.translate(ctx),
+        )
+    }
+}
+
+impl Translatable for rustc_ast::BinOp {
+    fn translate(&self, _ctx: &mut Context) -> String {
+        match self.node {
+            rustc_ast::BinOpKind::And => "and".to_string(),
+            rustc_ast::BinOpKind::Or => "or".to_string(),
+            // TODO: push error on bit operators
+            // We can use the default string values for the rest of them
+            _ => self.node.as_str().to_string(),
+        }
+    }
+}
+
+impl Translatable for rustc_ast::UnOp {
+    fn translate(&self, _ctx: &mut Context) -> String {
+        match self {
+            rustc_ast::UnOp::Not => "not".to_string(),
+            rustc_ast::UnOp::Neg => "-".to_string(),
+            rustc_ast::UnOp::Deref => "".to_string(), // Do not translate,
         }
     }
 }
@@ -157,9 +217,12 @@ impl Translatable for rustc_hir::Expr<'_> {
                 format!(
                     "{} {} {}",
                     e1.translate(ctx),
-                    op.node.as_str(),
+                    op.translate(ctx),
                     e2.translate(ctx)
                 )
+            }
+            rustc_hir::ExprKind::Unary(op, e) => {
+                format!("{}{}", op.translate(ctx), e.translate(ctx))
             }
             rustc_hir::ExprKind::Call(op, args) => {
                 let operator = op.translate(ctx);
@@ -185,6 +248,14 @@ impl Translatable for rustc_hir::Expr<'_> {
             }
             rustc_hir::ExprKind::AddrOf(_b, _m, expr) => expr.translate(ctx),
             rustc_hir::ExprKind::Array(exprs) => format!("[{}]", translate_list(exprs, ctx, ", ")),
+            rustc_hir::ExprKind::Tup(exprs) => format!("({})", translate_list(exprs, ctx, ", ")),
+            rustc_hir::ExprKind::Struct(_, expr_fields, base) => {
+                let translated_base = base
+                    .map(|e| format!("... {}", e.translate(ctx)))
+                    .unwrap_or("".to_string());
+                let record_fields = translate_list(expr_fields, ctx, ", ");
+                format!("{{ {} }}", [translated_base, record_fields].join(", "))
+            }
             rustc_hir::ExprKind::Block(block, _label) => match block.expr {
                 Some(expr) => expr.translate(ctx),
                 None => "".to_string(),
@@ -202,11 +273,33 @@ impl Translatable for rustc_hir::Expr<'_> {
                     translate_list(arm, ctx, "\n")
                 )
             }
+            rustc_hir::ExprKind::If(cond, then, else_) => {
+                let condition = cond.translate(ctx);
+                let then_expr = then.translate(ctx);
+                let else_expr = else_
+                    .map(|e| e.translate(ctx))
+                    .unwrap_or("<mandatory-else-branch>".to_string());
+
+                format!(
+                    "if ({}) {{\n  {}\n}} else {{\n  {}\n}}",
+                    condition, then_expr, else_expr
+                )
+            }
             rustc_hir::ExprKind::MethodCall(_, expr, _, _) => expr.translate(ctx),
+            rustc_hir::ExprKind::Closure(c) => c.translate(ctx),
             rustc_hir::ExprKind::DropTemps(expr) => expr.translate(ctx),
             rustc_hir::ExprKind::Field(expr, field) => format!("{}.{}", expr.translate(ctx), field),
             _ => missing_translation(*self, "expression"),
         }
+    }
+}
+
+impl Translatable for rustc_hir::Closure<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let body = ctx.tcx.hir().body(self.body);
+        let params = translate_list(body.params, ctx, ", ");
+        let expr = body.value.translate(ctx);
+        format!("({}) => {}", params, expr)
     }
 }
 
@@ -246,24 +339,40 @@ impl Translatable for rustc_hir::GenericArg<'_> {
     }
 }
 
-impl Translatable for VariantData<'_> {
+impl Translatable for rustc_hir::VariantData<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
-        let fields = self
-            .fields()
-            .iter()
-            .map(|field| {
-                let field_ident = field.ident.to_string();
-                Field {
-                    name: field_ident.clone(),
-                    ty: field.ty.translate(ctx),
-                    nondet_value: field.ty.nondet_value(ctx, &field_ident),
+        match self {
+            rustc_hir::VariantData::Struct { fields, .. } => {
+                let translated_fields = fields
+                    .iter()
+                    .map(|field| {
+                        let field_ident = field.ident.to_string();
+                        Field {
+                            name: field_ident.clone(),
+                            ty: field.ty.translate(ctx),
+                            nondet_value: field.ty.nondet_value(ctx, &field_ident),
+                        }
+                    })
+                    .collect_vec();
+
+                ctx.struct_fields.extend(translated_fields.clone());
+
+                format!("{{ {} }}", translate_vec(translated_fields, ctx, ", "))
+            }
+            rustc_hir::VariantData::Tuple(fields, _, _) => {
+                let translated_fields = fields
+                    .iter()
+                    .map(|field| field.ty.translate(ctx))
+                    .collect_vec();
+
+                if translated_fields.len() == 1 {
+                    return translated_fields[0].clone();
                 }
-            })
-            .collect_vec();
 
-        ctx.struct_fields.extend(fields.clone());
-
-        translate_vec(fields, ctx, ", ")
+                format!("({})", translated_fields.join(", "))
+            }
+            rustc_hir::VariantData::Unit(..) => "".to_string(), // No fields to translate
+        }
     }
 }
 
@@ -275,6 +384,10 @@ impl Translatable for Field {
 
 impl Translatable for rustc_hir::EnumDef<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
+        if self.variants.is_empty() {
+            return "{}".to_string();
+        }
+
         translate_list(self.variants, ctx, "\n")
     }
 }
@@ -299,7 +412,7 @@ impl Translatable for rustc_hir::Variant<'_> {
         if self.data.fields().is_empty() {
             format!("    | {qualified_ident}")
         } else {
-            format!("    | {qualified_ident}({{ {translated_fields} }})",)
+            format!("    | {qualified_ident}({translated_fields})",)
         }
     }
 }
@@ -353,13 +466,17 @@ impl Translatable for Function<'_> {
 impl Translatable for rustc_hir::Item<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         let name = self.ident.as_str();
+        let crate_name = ctx.tcx.crate_name(self.owner_id.def_id.to_def_id().krate);
 
         if name.starts_with('_')
           || ["", "FIELDS", "VARIANTS"].contains(&name)
-          || name.starts_with("query") // skip query functions for now
+          // skip query functions for now
+          || name.starts_with("query")
           || name.starts_with("Query")
           || name.starts_with("ContractError")
           || name.starts_with("get_")
+          // skip items from proto files
+          || format!("{:?}", self.span).contains("protos")
         {
             // skip irrelevant items
             return "".to_string();
@@ -441,18 +558,36 @@ impl Translatable for rustc_hir::Item<'_> {
 
                 ctx.structs.insert(name.to_string(), fields);
 
-                format!("  type {name} = {{ {translated_fields} }}")
+                format!("  type {name} = {translated_fields}")
             }
 
             rustc_hir::ItemKind::Enum(enum_def, _generics) => {
                 format!("  type {name} =\n{}", enum_def.translate(ctx))
+            }
+            rustc_hir::ItemKind::TyAlias(ty, _generics) => {
+                format!("  type {name} = {}", ty.translate(ctx))
             }
             // FIXME: We should translate this (at least Use) into imports.
             // This is only necessary for crates that import things from other crates
             rustc_hir::ItemKind::Use(..) => "".to_string(),
             rustc_hir::ItemKind::Mod(..) => "".to_string(),
             rustc_hir::ItemKind::ExternCrate(..) => "".to_string(),
-            _ => missing_translation(*self, "item"),
+            rustc_hir::ItemKind::Macro(..) => {
+                eprintln!("Untranslated macro: {}", name);
+                "".to_string()
+            }
+            rustc_hir::ItemKind::Trait(..) => {
+                eprintln!("Untranslated macro: {}", name);
+                "".to_string()
+            }
+            _ => {
+                eprintln!(
+                    "No translation for item {name} from crate {crate_name}: {:#?}",
+                    self
+                );
+                // Top-level "<missing-item>" strings are not helpful. Return an empty string instead.
+                "".to_string()
+            }
         }
     }
 }
