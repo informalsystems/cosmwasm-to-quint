@@ -250,6 +250,14 @@ impl Translatable for rustc_hir::Expr<'_> {
             }
             rustc_hir::ExprKind::AddrOf(_b, _m, expr) => expr.translate(ctx),
             rustc_hir::ExprKind::Array(exprs) => format!("[{}]", translate_list(exprs, ctx, ", ")),
+            rustc_hir::ExprKind::Tup(exprs) => format!("({})", translate_list(exprs, ctx, ", ")),
+            rustc_hir::ExprKind::Struct(_, expr_fields, base) => {
+                let translated_base = base
+                    .map(|e| format!("... {}", e.translate(ctx)))
+                    .unwrap_or("".to_string());
+                let record_fields = translate_list(expr_fields, ctx, ", ");
+                format!("{{ {} }}", [translated_base, record_fields].join(", "))
+            }
             rustc_hir::ExprKind::Block(block, _label) => match block.expr {
                 Some(expr) => expr.translate(ctx),
                 None => "".to_string(),
