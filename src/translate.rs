@@ -46,6 +46,7 @@ impl Translatable for Ident {
             ("Uint64", "int"),
             ("u128", "int"),
             ("u64", "int"),
+            ("Decimal", "int"),
             ("Timestamp", "int"),
             ("DepsMut", "ContractState"),
             ("Deps", "ContractState"),
