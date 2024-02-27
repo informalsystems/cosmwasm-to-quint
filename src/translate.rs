@@ -156,19 +156,57 @@ impl Translatable for rustc_hir::Pat<'_> {
 
                 format!("{}(__r)", qpath.translate(ctx))
             }
+            rustc_hir::PatKind::TupleStruct(qpath, [pat], _) => {
+                // Only translate this for a single pattern - idk how to handle multiple patterns yet
+                format!("{}({})", qpath.translate(ctx), pat.translate(ctx))
+            }
+            rustc_hir::PatKind::Wild => "_".to_string(),
             _ => missing_translation(*self, "pattern"),
         }
     }
 }
 
-impl Translatable for LitKind {
+impl Translatable for rustc_ast::LitKind {
     fn translate(&self, _ctx: &mut Context) -> String {
         match self {
-            LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
+            rustc_ast::LitKind::Str(sym, rustc_ast::StrStyle::Cooked) => {
                 format!("\"{}\"", sym.as_str())
             }
-            LitKind::Int(i, _) => i.to_string(),
+            rustc_ast::LitKind::Int(i, _) => i.to_string(),
+            rustc_ast::LitKind::Bool(v) => v.to_string(),
             _ => missing_translation(self.clone(), "literal"),
+        }
+    }
+}
+
+impl Translatable for rustc_hir::ExprField<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        format!(
+            "{}: {}",
+            self.ident.translate(ctx),
+            self.expr.translate(ctx),
+        )
+    }
+}
+
+impl Translatable for rustc_ast::BinOp {
+    fn translate(&self, _ctx: &mut Context) -> String {
+        match self.node {
+            rustc_ast::BinOpKind::And => "and".to_string(),
+            rustc_ast::BinOpKind::Or => "or".to_string(),
+            // TODO: push error on bit operators
+            // We can use the default string values for the rest of them
+            _ => self.node.as_str().to_string(),
+        }
+    }
+}
+
+impl Translatable for rustc_ast::UnOp {
+    fn translate(&self, _ctx: &mut Context) -> String {
+        match self {
+            rustc_ast::UnOp::Not => "not".to_string(),
+            rustc_ast::UnOp::Neg => "-".to_string(),
+            rustc_ast::UnOp::Deref => "".to_string(), // Do not translate,
         }
     }
 }
@@ -181,9 +219,12 @@ impl Translatable for rustc_hir::Expr<'_> {
                 format!(
                     "{} {} {}",
                     e1.translate(ctx),
-                    op.node.as_str(),
+                    op.translate(ctx),
                     e2.translate(ctx)
                 )
+            }
+            rustc_hir::ExprKind::Unary(op, e) => {
+                format!("{}{}", op.translate(ctx), e.translate(ctx))
             }
             rustc_hir::ExprKind::Call(op, args) => {
                 let operator = op.translate(ctx);
