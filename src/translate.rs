@@ -66,12 +66,20 @@ impl Translatable for rustc_hir::PathSegment<'_> {
 
         match self.args {
             Some(args) => {
-                if ["List", "Set"].contains(&translated.as_str()) {
+                if ["List", "Set", "Option"].contains(&translated.as_str()) {
                     // FIXME: this should always happen after type-level polymorphism is implemented
                     let translated_args = translate_list(args.args, ctx, ", ");
 
                     if translated_args == *"" {
                         return translated.to_string();
+                    }
+
+                    if translated == "Option" {
+                        return match translated_args.as_str() {
+                            "int" => return "OptionalInt".to_string(),
+                            "str" => return "OptionalString".to_string(),
+                            s => format!("Optional{}", s),
+                        };
                     }
 
                     return format!("{}[{}]", translated, translated_args);
