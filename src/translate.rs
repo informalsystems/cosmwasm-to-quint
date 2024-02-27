@@ -470,10 +470,12 @@ impl Translatable for rustc_hir::Item<'_> {
 
         if name.starts_with('_')
           || ["", "FIELDS", "VARIANTS"].contains(&name)
-          || name.starts_with("query") // skip query functions for now
+          // skip query functions for now
+          || name.starts_with("query")
           || name.starts_with("Query")
           || name.starts_with("ContractError")
           || name.starts_with("get_")
+          // skip items from proto files
           || format!("{:?}", self.span).contains("protos")
         {
             // skip irrelevant items
