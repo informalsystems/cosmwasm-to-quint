@@ -107,9 +107,24 @@ impl Translatable for rustc_hir::QPath<'_> {
 impl Translatable for rustc_hir::Ty<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         match self.kind {
-            TyKind::Path(qpath) => qpath.translate(ctx),
-            TyKind::Tup(tys) => {
+            rustc_hir::TyKind::Path(qpath) => qpath.translate(ctx),
+            rustc_hir::TyKind::Tup(tys) => {
                 format!("({})", translate_list(tys, ctx, ", "))
+            }
+            rustc_hir::TyKind::Array(ty, _) | rustc_hir::TyKind::Slice(ty) => {
+                format!("List[{}]", ty.translate(ctx))
+            }
+            rustc_hir::TyKind::Ref(_, rustc_hir::MutTy { ty, mutbl: _ }) => {
+                let t = ty.translate(ctx);
+
+                // FIXME: in full code generation, we should deal with this,
+                // i.e. by returning this type at the end along with the
+                // existing return
+                eprintln!(
+                    "Mutable types are not supported. Removed `mut` from {t}, in {}",
+                    ctx.current_item_name
+                );
+                t
             }
             _ => missing_translation(*self, "type"),
         }
