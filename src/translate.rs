@@ -473,6 +473,7 @@ impl Translatable for rustc_hir::Item<'_> {
           || name.starts_with("Query")
           || name.starts_with("ContractError")
           || name.starts_with("get_")
+          || format!("{:?}", self.span).contains("protos")
         {
             // skip irrelevant items
             return "".to_string();
