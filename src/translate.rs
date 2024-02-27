@@ -466,6 +466,7 @@ impl Translatable for Function<'_> {
 impl Translatable for rustc_hir::Item<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         let name = self.ident.as_str();
+        let crate_name = ctx.tcx.crate_name(self.owner_id.def_id.to_def_id().krate);
 
         if name.starts_with('_')
           || ["", "FIELDS", "VARIANTS"].contains(&name)
@@ -555,18 +556,36 @@ impl Translatable for rustc_hir::Item<'_> {
 
                 ctx.structs.insert(name.to_string(), fields);
 
-                format!("  type {name} = {{ {translated_fields} }}")
+                format!("  type {name} = {translated_fields}")
             }
 
             rustc_hir::ItemKind::Enum(enum_def, _generics) => {
                 format!("  type {name} =\n{}", enum_def.translate(ctx))
+            }
+            rustc_hir::ItemKind::TyAlias(ty, _generics) => {
+                format!("  type {name} = {}", ty.translate(ctx))
             }
             // FIXME: We should translate this (at least Use) into imports.
             // This is only necessary for crates that import things from other crates
             rustc_hir::ItemKind::Use(..) => "".to_string(),
             rustc_hir::ItemKind::Mod(..) => "".to_string(),
             rustc_hir::ItemKind::ExternCrate(..) => "".to_string(),
-            _ => missing_translation(*self, "item"),
+            rustc_hir::ItemKind::Macro(..) => {
+                eprintln!("Untranslated macro: {}", name);
+                "".to_string()
+            }
+            rustc_hir::ItemKind::Trait(..) => {
+                eprintln!("Untranslated macro: {}", name);
+                "".to_string()
+            }
+            _ => {
+                eprintln!(
+                    "No translation for item {name} from crate {crate_name}: {:#?}",
+                    self
+                );
+                // Top-level "<missing-item>" strings are not helpful. Return an empty string instead.
+                "".to_string()
+            }
         }
     }
 }
