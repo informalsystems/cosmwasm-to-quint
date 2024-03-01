@@ -65,7 +65,7 @@ impl NondetValue for rustc_hir::Ty<'_> {
         }
 
         let nondet_value = match ty.as_str() {
-            "str" => "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string(),
+            "str" | "Addr" => "Set(\"s1\", \"s2\", \"s3\").oneOf()".to_string(),
             "int" => "0.to(MAX_AMOUNT).oneOf()".to_string(),
             "bool" => "Bool.oneOf()".to_string(),
             _ => {
