@@ -4,6 +4,7 @@ use crate::types::Context;
 
 pub const IMPORTS: &str = "
   import cw_types.* from \"../lib/cw_types\"
+  import messaging.* from \"../lib/messaging\"
   import bank from \"../lib/bank\"
 ";
 
@@ -48,6 +49,8 @@ pub const ACTIONS: &str = "
     val r = execute(contract_state, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
+      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
       return' = r._1,
       contract_state' = r._2,
     }
@@ -56,22 +59,21 @@ pub const ACTIONS: &str = "
   action advance_time = time' = time + 1
 
   action step = {
-    match return {
-      | Response_Ok(response) =>
-        if (response.messages.indices().size() > 0) all {
-          // Bank stuff
-          match response.messages.head() {
-            | BankMsg_Send(msg) => all {
-                bank' = bank::send(bank, CONTRACT_ADDRESS, msg),
-                contract_state' = contract_state,
-                return' = Response_Ok({ ...response, messages: response.messages.tail() }),
-                advance_time,
-             }
+    val message_getting = get_message(return)
+    val new_return = message_getting._1
+    val opt_message = message_getting._2
+    match opt_message {
+      | SomeMessage(submsg) => {
+          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
+          all {
+            bank' = new_state.bank,
+            return' = new_state.return,
+            contract_state' = new_state.contract_state,
+            advance_time,
           }
-        } else {
-          execute_step
-        }
-      | _ => execute_step
+      }
+      | NoneMessage => execute_step
     }
   }
 ";
@@ -147,10 +149,22 @@ pub fn post_items(ctx: &Context) -> String {
         .collect_vec()
         .join(",\n");
 
+    let special_actions = ["execute", "instantiate", "reply"];
+    let reply = if !ctx.stateful_ops.contains(&"reply".to_string()) {
+        // Generate default reply to be given for the message handler
+        "
+
+  pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Response_Ok(Response_new), state)
+
+"
+    } else {
+        "\n"
+    };
+
     let actions = ctx
         .stateful_ops
         .iter()
-        .filter(|op| *op != &"execute".to_string() && *op != &"instantiate".to_string())
+        .filter(|op| !special_actions.contains(&op.as_str()))
         .map(|op| format!("{op}_action"))
         .collect_vec()
         .join(",\n      ");
@@ -170,9 +184,8 @@ pub fn post_items(ctx: &Context) -> String {
       {actions}
     }},
     advance_time,
-    bank' = bank,
   }}
-
+{reply}
 {INITIALIZERS}
 {ACTIONS}
 }}"
