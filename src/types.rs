@@ -2,16 +2,19 @@ use std::collections::HashMap;
 
 use rustc_middle::ty::TyCtxt;
 
+use crate::nondet::NondetInfo;
+
 #[derive(Clone, Debug)]
 pub struct Field {
     pub name: String,
     pub ty: String,
-    pub nondet_value: String,
+    pub nondet_info: NondetInfo,
 }
 
 #[derive(Clone, Debug)]
 pub struct Constructor {
     pub name: String,
+    pub origin: String,
     pub fields: Vec<Field>,
 }
 
@@ -46,6 +49,7 @@ pub fn fallback_constructor(name: &str) -> Constructor {
     eprintln!("No message type for action: {name}");
     Constructor {
         name: format!("ConstructorFor{}", name),
+        origin: "UnknownType".to_string(),
         fields: vec![],
     }
 }

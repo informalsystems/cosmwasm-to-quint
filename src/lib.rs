@@ -137,9 +137,10 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
             "InstantiateMsg".to_string(),
         )]),
         constructors: HashMap::from([(
-            "Response_Ok".to_string(),
+            "Ok".to_string(),
             Constructor {
-                name: "Response_Ok".to_string(),
+                name: "Ok".to_string(),
+                origin: "Result".to_string(),
                 fields: vec![],
             },
         )]),
