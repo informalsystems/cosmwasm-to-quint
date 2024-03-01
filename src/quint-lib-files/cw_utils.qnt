@@ -4,37 +4,29 @@
 module cw_utils {
   import cw_types.* from "./cw_types"
 
-  type OneCoinResult =
-    | OneCoin_Ok(Coin)
-    | OneCoin_Err(str)
-
-  type MustPayResult =
-    | MustPay_Ok(int)
-    | MustPay_Err(str)
-
-  def one_coin(info: MessageInfo): OneCoinResult = {
+  def one_coin(info: MessageInfo): Result[Coin, ContractError] = {
     if (info.funds.indices().size() == 0) {
-      OneCoin_Err("No funds")
+      Err("No funds")
     } else if (info.funds.indices().size() == 1) {
       val coin = info.funds[0]
       if (coin.amount == 0) {
-        OneCoin_Err("No funds")
+        Err("No funds")
       } else {
-        OneCoin_Ok(coin)
+        Ok(coin)
       }
     } else {
-      OneCoin_Err("Multiple Denoms")
+      Err("Multiple Denoms")
     }
   }
 
-  def must_pay(info: MessageInfo, denom: str): MustPayResult = {
+  def must_pay(info: MessageInfo, denom: str): Result[int, ContractError] = {
     match one_coin(info) {
-      | OneCoin_Err(err) => MustPay_Err(err)
-      | OneCoin_Ok(coin) => {
+      | Err(err) => Err(err)
+      | Ok(coin) => {
         if (coin.denom != denom) {
-          MustPay_Err("Missing Denom")
+          Err("Missing Denom")
         } else {
-          MustPay_Ok(coin.amount)
+          Ok(coin.amount)
         }
       }
     }

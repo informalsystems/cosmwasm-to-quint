@@ -1,6 +1,8 @@
 // -*- mode: Bluespec; -*-
 
 module cw_types {
+  import basicSpells.* from "./basicSpells"
+
   type Addr = str
   type Denom = str
 
@@ -13,7 +15,7 @@ module cw_types {
     | ReplyOn_Success
     | ReplyOn_Never
 
-  type SubMsg = { id: int, msg: CosmosMsg, reply_on: ReplyOn, gas_limit: OptionalInt }
+  type SubMsg = { id: int, msg: CosmosMsg, reply_on: ReplyOn, gas_limit: Option[int] }
   type Attribute = { key: str, value: CW_Serialized }
   type Event = { ty: str, attributes: List[Attribute] }
 
@@ -21,7 +23,7 @@ module cw_types {
     messages: List[SubMsg],
     attributes: List[Attribute],
     events: List[Event],
-    data: OptionalString,
+    data: Option[str],
   }
 
   type CosmosMsg =
@@ -33,7 +35,7 @@ module cw_types {
 
   type WasmMsg =
     | WasmMsg_Instantiate({
-        admin: OptionalString,
+        admin: Option[str],
         code_id: int,
         // msg is the JSON-encoded InstantiateMsg struct (as raw Binary)
         // msg: InstantiateMsg, // TODO: we need polymorphism
@@ -51,7 +53,7 @@ module cw_types {
   type BankMsg =
     | BankMsg_Send({ to_address: str, amount: List[Coin] })
 
-  pure val Response_new = { messages: [], attributes: [], events: [], data: NoneString }
+  pure val Response_new = { messages: [], attributes: [], events: [], data: None }
 
   /// This is used for cases when we use ReplyOn::Never and the id doesn't matter
   pure val UNUSED_MSG_ID = 0
@@ -60,7 +62,7 @@ module cw_types {
     id: UNUSED_MSG_ID,
     msg: msg,
     reply_on: ReplyOn_Never,
-    gas_limit: NoneInt,
+    gas_limit: None,
   }
 
   pure def SubMsg_reply_on_sucess(msg: CosmosMsg, id: int): SubMsg = {
@@ -76,7 +78,7 @@ module cw_types {
   }
 
   pure def with_gas_limit(msg: SubMsg, limit: int): SubMsg = {
-    { ...msg, gas_limit: SomeInt(limit) }
+    { ...msg, gas_limit: Some(limit) }
   }
 
   pure def __reply_on(msg: CosmosMsg, id: int, reply_on: ReplyOn): SubMsg = {
@@ -84,7 +86,7 @@ module cw_types {
       id: id,
       msg: msg,
       reply_on: reply_on,
-      gas_limit: NoneInt,
+      gas_limit: None,
     }
   }
 
@@ -100,16 +102,14 @@ module cw_types {
     | _ => false
   }
 
-  type SubMsgResult = SubMsgResult_Ok(SubMsgResponse) | SubMsgResult_Err(str)
-
   type SubMsgResponse = {
     events: List[Event],
-    data: Optional_CW_Serialized
+    data: Option[CW_Serialized]
   }
 
   type Reply = {
     id: int,
-    result: SubMsgResult,
+    result: Result[SubMsgResponse, ContractError],
   }
 
   pure def add_attribute(r: Response, k: str, v: CW_Serialized): Response = {
@@ -145,16 +145,8 @@ module cw_types {
     funds: List[Coin]
   }
 
-  // TODO: make polymorphic
-  type OptionalString = SomeString(str) | NoneString
-  type OptionalInt = SomeInt(int) | NoneInt
-
   type CW_Serialized =
     | FromStr(str)
     | FromInt(int)
     | FromListInt(List[int])
-
-  type CW_SerializedResult = CW_Serialized_Ok(CW_Serialized) | CW_Serialized_Err(str)
-  type Optional_CW_Serialized = Some_CW_Serialized(CW_Serialized) | None_CW_Serialized
 }
-
