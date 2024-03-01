@@ -412,12 +412,20 @@ impl Translatable for rustc_hir::Item<'_> {
                     return format!("  pure def {name}{sig} = {body_value}");
                 }
 
-                if name == "instantiate" {
+                if name == "instantiate" || name == "reply" {
+                    // instantiate explanation:
+                    //
                     // FIXME: We need to do something about instantiate
                     // Instantiate is a stateful function (taking state as an
                     // argument and returning it) But currently we don't call it
                     // in the state machine (from `step`). We probably need to
                     // update the boilerplate stuff to call it.
+                    //
+                    // reply explanation:
+                    //
+                    // Reply is a special def that will be called when
+                    // processing a message with a compatible reply_on field. We
+                    // don't want to generate a nondet action for it.
                     return format!("  pure def {name}{sig} = ({body_value}, state)");
                 }
 
