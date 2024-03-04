@@ -22,14 +22,6 @@ pub fn translate_list<T: Translatable>(items: &[T], ctx: &mut Context, sep: &str
         .join(sep)
 }
 
-pub fn translate_vec<T: Translatable>(items: &Vec<T>, ctx: &mut Context, sep: &str) -> String {
-    items
-        .iter()
-        .map(|x| x.translate(ctx))
-        .collect_vec()
-        .join(sep)
-}
-
 pub fn missing_translation<T: Translatable + Debug>(item: T, descr: &str) -> String {
     eprintln!("No translation for {descr}: {:#?}", item);
     format!("<missing-{descr}>")
@@ -350,7 +342,7 @@ impl Translatable for rustc_hir::VariantData<'_> {
 
                 ctx.struct_fields.extend(translated_fields.clone());
 
-                format!("{{ {} }}", translate_vec(&translated_fields, ctx, ", "))
+                format!("{{ {} }}", translated_fields.translate(ctx))
             }
             rustc_hir::VariantData::Tuple(fields, _, _) => {
                 let translated_fields = fields
@@ -377,13 +369,19 @@ impl Translatable for Field {
 
 impl<T: Translatable> Translatable for Vec<T> {
     fn translate(&self, ctx: &mut Context) -> String {
-        translate_vec(self, ctx, ", ")
+        self.iter()
+            .map(|x| x.translate(ctx))
+            .collect_vec()
+            .join(", ")
     }
 }
 
 impl Translatable for Constructor {
     fn translate(&self, _ctx: &mut Context) -> String {
-        self.origin.clone()
+        // This is only ever printed as a type, therefore, we need to return the
+        // actual produced type from the constructor here
+        // i.e. Some(int) should return Optional[int]
+        self.result_type.clone()
     }
 }
 
@@ -410,7 +408,7 @@ impl Translatable for rustc_hir::Variant<'_> {
             qualified_ident.clone(),
             Constructor {
                 name: qualified_ident.clone(),
-                origin: ctx.current_item_name.clone(),
+                result_type: ctx.current_item_name.clone(),
                 fields,
             },
         );

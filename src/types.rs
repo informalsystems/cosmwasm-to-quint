@@ -14,7 +14,7 @@ pub struct Field {
 #[derive(Clone, Debug)]
 pub struct Constructor {
     pub name: String,
-    pub origin: String,
+    pub result_type: String,
     pub fields: Vec<Field>,
 }
 
@@ -49,7 +49,7 @@ pub fn fallback_constructor(name: &str) -> Constructor {
     eprintln!("No message type for action: {name}");
     Constructor {
         name: format!("ConstructorFor{}", name),
-        origin: "UnknownType".to_string(),
+        result_type: "UnknownType".to_string(),
         fields: vec![],
     }
 }

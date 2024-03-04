@@ -64,7 +64,7 @@ pub const ACTIONS: &str = "
     val new_return = message_getting._1
     val opt_message = message_getting._2
     match opt_message {
-      | SomeMessage(submsg) => {
+      | Some(submsg) => {
           val current_state = { bank: bank, return: new_return, contract_state: contract_state }
           val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
           all {
@@ -74,7 +74,7 @@ pub const ACTIONS: &str = "
             advance_time,
           }
       }
-      | NoneMessage => execute_step
+      | None => execute_step
     }
   }
 ";

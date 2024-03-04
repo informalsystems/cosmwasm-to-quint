@@ -140,7 +140,7 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
             "Ok".to_string(),
             Constructor {
                 name: "Ok".to_string(),
-                origin: "Result".to_string(),
+                result_type: "Result".to_string(),
                 fields: vec![],
             },
         )]),
