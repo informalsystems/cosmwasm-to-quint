@@ -1,3 +1,5 @@
+// -*- mode: Bluespec; -*-
+
 module messaging {
   import cw_types.* from "./cw_types"
   import bank from "./bank"

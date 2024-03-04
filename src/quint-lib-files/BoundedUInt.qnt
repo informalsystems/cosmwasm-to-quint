@@ -1,3 +1,5 @@
+// -*- mode: Bluespec; -*-
+
 module BoundedUInt {
   /// The size of this integer type in bits.
   const BITS: int

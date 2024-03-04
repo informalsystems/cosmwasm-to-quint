@@ -1,3 +1,5 @@
+// -*- mode: Bluespec; -*-
+
 module bank {
   import cw_types.* from "./cw_types"
   type Bank = Addr -> Denom -> int
