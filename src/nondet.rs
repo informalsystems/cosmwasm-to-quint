@@ -164,10 +164,9 @@ impl NondetValue for Constructor {
 }
 
 impl NondetValue for rustc_hir::PathSegment<'_> {
+    // FIXME: This should be general and handle all type names
     fn nondet_info(&self, ctx: &mut Context, ident: &str) -> NondetInfo {
         let translated_type = self.ident.translate(ctx);
-
-        // FIXME: This should be general and handle all types
 
         // For List and Option, we need to generate nondet value(s) for the element type
         let args_as_type = match self.args {
