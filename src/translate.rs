@@ -22,14 +22,6 @@ pub fn translate_list<T: Translatable>(items: &[T], ctx: &mut Context, sep: &str
         .join(sep)
 }
 
-pub fn translate_vec<T: Translatable>(items: Vec<T>, ctx: &mut Context, sep: &str) -> String {
-    items
-        .iter()
-        .map(|x| x.translate(ctx))
-        .collect_vec()
-        .join(sep)
-}
-
 pub fn missing_translation<T: Translatable + Debug>(item: T, descr: &str) -> String {
     eprintln!("No translation for {descr}: {:#?}", item);
     format!("<missing-{descr}>")
@@ -37,6 +29,7 @@ pub fn missing_translation<T: Translatable + Debug>(item: T, descr: &str) -> Str
 
 impl Translatable for Ident {
     fn translate(&self, _ctx: &mut Context) -> String {
+        // FIXME: this should be a map
         let translated_segments: &HashMap<&str, &str> = &HashMap::from([
             ("Vec", "List"),
             ("String", "str"),
@@ -53,7 +46,7 @@ impl Translatable for Ident {
             ("Timestamp", "int"),
             ("DepsMut", "ContractState"),
             ("Deps", "ContractState"),
-            ("Ok", "Response_Ok"),
+            ("Ok", "Ok"),
             ("deps", "state"),
             ("_deps", "state"),
         ]);
@@ -69,26 +62,13 @@ impl Translatable for rustc_hir::PathSegment<'_> {
 
         match self.args {
             Some(args) => {
-                if ["List", "Set", "Option"].contains(&translated.as_str()) {
-                    // FIXME: this should always happen after type-level polymorphism is implemented
-                    let translated_args = translate_list(args.args, ctx, ", ");
+                let translated_args = translate_list(args.args, ctx, ", ");
 
-                    if translated_args == *"" {
-                        return translated.to_string();
-                    }
-
-                    if translated == "Option" {
-                        return match translated_args.as_str() {
-                            "int" => return "OptionalInt".to_string(),
-                            "str" => return "OptionalString".to_string(),
-                            s => format!("Optional{}", s),
-                        };
-                    }
-
-                    return format!("{}[{}]", translated, translated_args);
+                if translated_args == *"" {
+                    return translated.to_string();
                 }
 
-                translated.to_string()
+                format!("{}[{}]", translated, translated_args)
             }
             None => translated.to_string(),
         }
@@ -269,7 +249,7 @@ impl Translatable for rustc_hir::Expr<'_> {
                 let match_expr = expr.translate(ctx);
                 if match_expr != "msg" {
                     // FIXME: should probably look into type for ExecuteMsg type
-                    return "Response_Ok(Response_new)".to_string();
+                    return "Ok(Response_new)".to_string();
                 }
 
                 format!(
@@ -355,14 +335,14 @@ impl Translatable for rustc_hir::VariantData<'_> {
                         Field {
                             name: field_ident.clone(),
                             ty: field.ty.translate(ctx),
-                            nondet_value: field.ty.nondet_value(ctx, &field_ident),
+                            nondet_info: field.ty.nondet_info(ctx, &field_ident),
                         }
                     })
                     .collect_vec();
 
                 ctx.struct_fields.extend(translated_fields.clone());
 
-                format!("{{ {} }}", translate_vec(translated_fields, ctx, ", "))
+                format!("{{ {} }}", translated_fields.translate(ctx))
             }
             rustc_hir::VariantData::Tuple(fields, _, _) => {
                 let translated_fields = fields
@@ -384,6 +364,24 @@ impl Translatable for rustc_hir::VariantData<'_> {
 impl Translatable for Field {
     fn translate(&self, _ctx: &mut Context) -> String {
         format!("{}: {}", self.name, self.ty)
+    }
+}
+
+impl<T: Translatable> Translatable for Vec<T> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        self.iter()
+            .map(|x| x.translate(ctx))
+            .collect_vec()
+            .join(", ")
+    }
+}
+
+impl Translatable for Constructor {
+    fn translate(&self, _ctx: &mut Context) -> String {
+        // This is only ever printed as a type, therefore, we need to return the
+        // actual produced type from the constructor here
+        // i.e. Some(int) should return Optional[int]
+        self.result_type.clone()
     }
 }
 
@@ -410,6 +408,7 @@ impl Translatable for rustc_hir::Variant<'_> {
             qualified_ident.clone(),
             Constructor {
                 name: qualified_ident.clone(),
+                result_type: ctx.current_item_name.clone(),
                 fields,
             },
         );
@@ -478,8 +477,9 @@ impl Translatable for rustc_hir::Item<'_> {
           // skip query functions for now
           || name.starts_with("query")
           || name.starts_with("Query")
-          || name.starts_with("ContractError")
           || name.starts_with("get_")
+          // ContractError is defined as str. This way, users don't have to worry about error types in a spec.
+          || name.starts_with("ContractError")
           // skip items from proto files
           || format!("{:?}", self.span).contains("protos")
         {
@@ -551,7 +551,7 @@ impl Translatable for rustc_hir::Item<'_> {
                     .and_then(|s| ctx.constructors.get(s).cloned())
                     .unwrap_or_else(|| fallback_constructor(name));
 
-                let nondet_value = ctor.nondet_value(ctx, "message");
+                let nondet_value = ctor.nondet_definition(ctx, "message");
 
                 format!(
                     "  pure def {name}{sig} = ({body_value}, state)

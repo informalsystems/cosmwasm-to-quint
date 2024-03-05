@@ -3,6 +3,7 @@ use itertools::Itertools;
 use crate::types::Context;
 
 pub const IMPORTS: &str = "
+  import basicSpells.* from \"../lib/basicSpells\"
   import cw_types.* from \"../lib/cw_types\"
   import messaging.* from \"../lib/messaging\"
   import bank from \"../lib/bank\"
@@ -33,7 +34,7 @@ pub const INITIALIZERS: &str = "
   action init = all {
     contract_state' = init_contract_state,
     bank' = init_bank_state,
-    return' = Response_Err(\"No previous request\"),
+    return' = Err(\"No previous request\"),
     time' = 0,
   }
 ";
@@ -63,7 +64,7 @@ pub const ACTIONS: &str = "
     val new_return = message_getting._1
     val opt_message = message_getting._2
     match opt_message {
-      | SomeMessage(submsg) => {
+      | Some(submsg) => {
           val current_state = { bank: bank, return: new_return, contract_state: contract_state }
           val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
           all {
@@ -73,7 +74,7 @@ pub const ACTIONS: &str = "
             advance_time,
           }
       }
-      | NoneMessage => execute_step
+      | None => execute_step
     }
   }
 ";
@@ -154,7 +155,7 @@ pub fn post_items(ctx: &Context) -> String {
         // Generate default reply to be given for the message handler
         "
 
-  pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Response_Ok(Response_new), state)
+  pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
 
 "
     } else {
