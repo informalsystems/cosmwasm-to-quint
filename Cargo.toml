@@ -11,3 +11,8 @@ rustc_plugin = "0.8.0-nightly-2024-01-06"
 env_logger = "0.10"
 clap = {version = "4.4", features = ["derive"]}
 serde = {version = "1", features = ["derive"]}
+rustc_utils = {version = "0.8.0-nightly-2024-01-06", features = ["test"]}
+
+[dev-dependencies]
+anyhow = {version = "1", features = ["backtrace"]}
+insta = {version = "1.22.0", features = ["redactions"]}

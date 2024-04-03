@@ -1,0 +1,368 @@
+---
+source: tests/integration_tests.rs
+expression: output
+---
+module flash_loan {
+  
+  import basicSpells.* from "../lib/basicSpells"
+  import cw_types.* from "../lib/cw_types"
+  import messaging.* from "../lib/messaging"
+  import bank from "../lib/bank"
+
+  
+  var contract_state: ContractState
+  var return: Result
+  var bank: bank::Bank
+  var time: int
+
+  
+  pure val CONTRACT_ADDRESS = "<contract>"
+
+  
+  pure val ADDRESSES = Set("s1", "s2", "s3", CONTRACT_ADDRESS)
+  pure val DENOMS = Set("d1", "uawesome")
+  pure val MAX_AMOUNT = 200
+
+
+  pure def instantiate(state: ContractState, _env: Env, info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
+    | ExecuteMsg_FlashLoan(__r) => flash_loan(state, env, info)
+    | ExecuteMsg_SettleLoan(__r) => settle_loan(state, env, info)
+    | ExecuteMsg_SetProxyAddr(__r) => set_proxy_addr(state, info, __r.proxy_addr)
+    | ExecuteMsg_WithdrawFunds(__r) => withdraw_funds(state, env, info, __r.recipient)
+    | ExecuteMsg_TransferOwner(__r) => transfer_owner(state, info, __r.new_owner)
+  }
+  pure def flash_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+                            
+  action flash_loan_action = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+    nondet message: UnknownType = ConstructorForflash_loan.oneOf()
+    execute_message(message, max_funds)
+  }
+  pure def settle_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+                            
+  action settle_loan_action = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+    nondet message: UnknownType = ConstructorForsettle_loan.oneOf()
+    execute_message(message, max_funds)
+  }
+  pure def set_proxy_addr(state: ContractState, info: MessageInfo, proxy_addr: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+                            
+  action set_proxy_addr_action = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+    nondet message: UnknownType = ConstructorForset_proxy_addr.oneOf()
+    execute_message(message, max_funds)
+  }
+  pure def withdraw_funds(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+                            
+  action withdraw_funds_action = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+    nondet message: UnknownType = ConstructorForwithdraw_funds.oneOf()
+    execute_message(message, max_funds)
+  }
+  pure def transfer_owner(state: ContractState, info: MessageInfo, new_owner: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+                            
+  action transfer_owner_action = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+    nondet message: UnknownType = ConstructorFortransfer_owner.oneOf()
+    execute_message(message, max_funds)
+  }
+  pure def is_trusted(sender: Addr, config: Config): bool = trusted
+  pure val DENOM = "uawesome"
+
+  type ContractState = {
+    config: Config,
+  flash_loan: FlashLoanState
+  }
+
+  pure val init_contract_state = {
+        config: <missing-type>,
+    flash_loan: <missing-type>
+  }
+
+  action execute_step = all {
+    any {
+      flash_loan_action,
+      settle_loan_action,
+      set_proxy_addr_action,
+      withdraw_funds_action,
+      transfer_owner_action
+    },
+    advance_time,
+  }
+
+
+  pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
+
+
+
+  pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
+
+  val env_val = { block: { time: time } }
+
+  action init = all {
+    contract_state' = init_contract_state,
+    bank' = init_bank_state,
+    return' = Err("No previous request"),
+    time' = 0,
+  }
+
+
+  action execute_message(message, max_funds) = {
+    nondet sender = ADDRESSES.oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{ denom: denom, amount: amount }]
+    val info = { sender: sender, funds: funds }
+
+    val r = execute(contract_state, env_val, info, message)
+    all {
+      bank.get(sender).get(denom) >= amount,
+      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
+      return' = r._1,
+      contract_state' = r._2,
+    }
+  }
+
+  action advance_time = time' = time + 1
+
+  action step = {
+    val message_getting = get_message(return)
+    val new_return = message_getting._1
+    val opt_message = message_getting._2
+    match opt_message {
+      | Some(submsg) => {
+          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
+          all {
+            bank' = new_state.bank,
+            return' = new_state.return,
+            contract_state' = new_state.contract_state,
+            advance_time,
+          }
+      }
+      | None => execute_step
+    }
+  }
+
+}
+module mock_arb {
+  
+  import basicSpells.* from "../lib/basicSpells"
+  import cw_types.* from "../lib/cw_types"
+  import messaging.* from "../lib/messaging"
+  import bank from "../lib/bank"
+
+  
+  var contract_state: ContractState
+  var return: Result
+  var bank: bank::Bank
+  var time: int
+
+  
+  pure val CONTRACT_ADDRESS = "<contract>"
+
+  
+  pure val ADDRESSES = Set("s1", "s2", "s3", CONTRACT_ADDRESS)
+  pure val DENOMS = Set("d1", "uawesome")
+  pure val MAX_AMOUNT = 200
+
+
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
+    | ExecuteMsg_Arbitrage(__r) => arbitrage(state, env, info, __r.recipient)
+  }
+  pure def arbitrage(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+                            
+  action arbitrage_action = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+    nondet message: UnknownType = ConstructorForarbitrage.oneOf()
+    execute_message(message, max_funds)
+  }
+  pure val DENOM = "uawesome"
+
+  type ContractState = {
+    config: Config
+  }
+
+  pure val init_contract_state = {
+        config: <missing-type>
+  }
+
+  action execute_step = all {
+    any {
+      arbitrage_action
+    },
+    advance_time,
+  }
+
+
+  pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
+
+
+
+  pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
+
+  val env_val = { block: { time: time } }
+
+  action init = all {
+    contract_state' = init_contract_state,
+    bank' = init_bank_state,
+    return' = Err("No previous request"),
+    time' = 0,
+  }
+
+
+  action execute_message(message, max_funds) = {
+    nondet sender = ADDRESSES.oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{ denom: denom, amount: amount }]
+    val info = { sender: sender, funds: funds }
+
+    val r = execute(contract_state, env_val, info, message)
+    all {
+      bank.get(sender).get(denom) >= amount,
+      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
+      return' = r._1,
+      contract_state' = r._2,
+    }
+  }
+
+  action advance_time = time' = time + 1
+
+  action step = {
+    val message_getting = get_message(return)
+    val new_return = message_getting._1
+    val opt_message = message_getting._2
+    match opt_message {
+      | Some(submsg) => {
+          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
+          all {
+            bank' = new_state.bank,
+            return' = new_state.return,
+            contract_state' = new_state.contract_state,
+            advance_time,
+          }
+      }
+      | None => execute_step
+    }
+  }
+
+}
+module proxy {
+  
+  import basicSpells.* from "../lib/basicSpells"
+  import cw_types.* from "../lib/cw_types"
+  import messaging.* from "../lib/messaging"
+  import bank from "../lib/bank"
+
+  
+  var contract_state: ContractState
+  var return: Result
+  var bank: bank::Bank
+  var time: int
+
+  
+  pure val CONTRACT_ADDRESS = "<contract>"
+
+  
+  pure val ADDRESSES = Set("s1", "s2", "s3", CONTRACT_ADDRESS)
+  pure val DENOMS = Set("d1", "uawesome")
+  pure val MAX_AMOUNT = 200
+
+
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
+    | ExecuteMsg_RequestFlashLoan(__r) => request_flash_loan(state, env, info, __r.recipient, __r.msg)
+  }
+  pure def request_flash_loan(state: ContractState, env: Env, _info: MessageInfo, recipient: Addr, msg: Binary): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+                            
+  action request_flash_loan_action = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = MAX_AMOUNT
+    nondet message: UnknownType = ConstructorForrequest_flash_loan.oneOf()
+    execute_message(message, max_funds)
+  }
+  pure val DENOM = "uawesome"
+
+  type ContractState = {
+    config: Config
+  }
+
+  pure val init_contract_state = {
+        config: <missing-type>
+  }
+
+  action execute_step = all {
+    any {
+      request_flash_loan_action
+    },
+    advance_time,
+  }
+
+
+  pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
+
+
+
+  pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
+
+  val env_val = { block: { time: time } }
+
+  action init = all {
+    contract_state' = init_contract_state,
+    bank' = init_bank_state,
+    return' = Err("No previous request"),
+    time' = 0,
+  }
+
+
+  action execute_message(message, max_funds) = {
+    nondet sender = ADDRESSES.oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{ denom: denom, amount: amount }]
+    val info = { sender: sender, funds: funds }
+
+    val r = execute(contract_state, env_val, info, message)
+    all {
+      bank.get(sender).get(denom) >= amount,
+      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
+      return' = r._1,
+      contract_state' = r._2,
+    }
+  }
+
+  action advance_time = time' = time + 1
+
+  action step = {
+    val message_getting = get_message(return)
+    val new_return = message_getting._1
+    val opt_message = message_getting._2
+    match opt_message {
+      | Some(submsg) => {
+          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
+          all {
+            bank' = new_state.bank,
+            return' = new_state.return,
+            contract_state' = new_state.contract_state,
+            advance_time,
+          }
+      }
+      | None => execute_step
+    }
+  }
+
+}
