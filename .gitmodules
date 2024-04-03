@@ -1,0 +1,3 @@
+[submodule "tests/fixtures/cosmwasm-ctf"]
+	path = tests/fixtures/cosmwasm-ctf
+	url = git@github.com:oak-security/cosmwasm-ctf.git
