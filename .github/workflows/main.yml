@@ -15,6 +15,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - uses: actions-rs/install@v0.1
+      with:
+        crate: cargo-insta
+        version: latest
+        use-tool-cache: true
+
     - name: Install nightly toolchain with rustc components and wasm target
       uses: actions-rs/toolchain@v1
       with:
@@ -22,7 +28,13 @@ jobs:
         override: true
         components: clippy, rust-src, rustc-dev, llvm-tools-preview
         target: wasm32-unknown-unknown
-    - name: Build
-      run: cargo build --verbose
+
+    - name: Install cosmwasm-to-quint
+      run: cargo install --path . --debug --locked
+      shell: bash
+
     - name: Run tests
-      run: cargo test --verbose
+      uses: actions-rs/cargo@v1
+      with:
+        command: insta
+        args: test
