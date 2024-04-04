@@ -37,7 +37,8 @@ fn run(dir: &str, f: impl FnOnce(&mut Command)) -> Result<String> {
 
     let _ = fs::remove_dir_all(ws.join("target"));
 
-    let output = cmd.output().context("Process failed AA")?;
+    println!("Running {:?}", cmd);
+    let output = cmd.output().context("Process failed")?;
     ensure!(
         output.status.success(),
         "Process exited with non-zero exit code. Stderr:\n{}",
@@ -46,8 +47,6 @@ fn run(dir: &str, f: impl FnOnce(&mut Command)) -> Result<String> {
 
     Ok(String::from_utf8(output.stdout)?)
 }
-
-// TODO: why do these tests need to be run sequentially?
 
 #[test]
 fn ctf01() -> Result<()> {
