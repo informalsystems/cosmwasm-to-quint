@@ -37,7 +37,6 @@ fn run(dir: &str, f: impl FnOnce(&mut Command)) -> Result<String> {
 
     let _ = fs::remove_dir_all(ws.join("target"));
 
-    println!("Running {:?}", cmd);
     let output = cmd.output().context("Process failed")?;
     ensure!(
         output.status.success(),
