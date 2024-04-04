@@ -1,4 +1,4 @@
-name: Rust
+name: cosmwasm-to-quint
 
 on:
   push:
@@ -10,15 +10,15 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
-    - name: Install nightly toolchain with clippy available
+    - name: Install nightly toolchain with rustc components and wasm target
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: nightly
+        toolchain: nightly-2024-01-06
         override: true
         components: clippy, rust-src, rustc-dev, llvm-tools-preview
         target: wasm32-unknown-unknown
