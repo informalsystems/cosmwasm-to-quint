@@ -1,0 +1,43 @@
+name: cosmwasm-to-quint
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - uses: actions-rs/install@v0.1
+      with:
+        crate: cargo-insta
+        version: latest
+        use-tool-cache: true
+
+    - name: Install nightly toolchain with rustc components and wasm target
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly-2024-01-06
+        override: true
+        components: clippy, rust-src, rustc-dev, llvm-tools-preview
+        target: wasm32-unknown-unknown
+
+    - name: Install cosmwasm-to-quint
+      run: cargo install --path . --debug --locked
+      shell: bash
+
+    - name: Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: insta
+        args: test
