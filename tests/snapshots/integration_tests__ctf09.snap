@@ -44,7 +44,8 @@ module oaksecurity_cosmwasm_ctf_09 {
   action increase_reward_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_IncreaseReward.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_IncreaseReward
     execute_message(message, max_funds)
   }
   pure def deposit(state: ContractState, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -52,7 +53,8 @@ module oaksecurity_cosmwasm_ctf_09 {
   action deposit_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_Deposit.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_Deposit
     execute_message(message, max_funds)
   }
   pure def withdraw(state: ContractState, info: MessageInfo, amount: int): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -69,7 +71,8 @@ module oaksecurity_cosmwasm_ctf_09 {
   action claim_rewards_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_ClaimRewards.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_ClaimRewards
     execute_message(message, max_funds)
   }
   pure val DENOM = "uawesome"

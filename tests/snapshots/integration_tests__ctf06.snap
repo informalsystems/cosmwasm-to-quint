@@ -46,7 +46,8 @@ module oaksecurity_cosmwasm_ctf_06 {
   action receive_cw20_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_Receive.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_Receive
     execute_message(message, max_funds)
   }
   pure def propose(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -54,7 +55,8 @@ module oaksecurity_cosmwasm_ctf_06 {
   action propose_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_Propose.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_Propose
     execute_message(message, max_funds)
   }
   pure def resolve_proposal(state: ContractState, env: Env, _info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(response), state)
@@ -62,7 +64,8 @@ module oaksecurity_cosmwasm_ctf_06 {
   action resolve_proposal_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_ResolveProposal.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_ResolveProposal
     execute_message(message, max_funds)
   }
   pure def owner_action(state: ContractState, info: MessageInfo, msg: CosmosMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)

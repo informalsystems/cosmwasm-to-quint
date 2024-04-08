@@ -37,7 +37,8 @@ module flash_loan {
   action flash_loan_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: UnknownType = ConstructorForflash_loan.oneOf()
+    
+    pure val message: UnknownType = ConstructorForflash_loan
     execute_message(message, max_funds)
   }
   pure def settle_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -45,7 +46,8 @@ module flash_loan {
   action settle_loan_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: UnknownType = ConstructorForsettle_loan.oneOf()
+    
+    pure val message: UnknownType = ConstructorForsettle_loan
     execute_message(message, max_funds)
   }
   pure def set_proxy_addr(state: ContractState, info: MessageInfo, proxy_addr: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -53,7 +55,8 @@ module flash_loan {
   action set_proxy_addr_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: UnknownType = ConstructorForset_proxy_addr.oneOf()
+    
+    pure val message: UnknownType = ConstructorForset_proxy_addr
     execute_message(message, max_funds)
   }
   pure def withdraw_funds(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -61,7 +64,8 @@ module flash_loan {
   action withdraw_funds_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: UnknownType = ConstructorForwithdraw_funds.oneOf()
+    
+    pure val message: UnknownType = ConstructorForwithdraw_funds
     execute_message(message, max_funds)
   }
   pure def transfer_owner(state: ContractState, info: MessageInfo, new_owner: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -69,7 +73,8 @@ module flash_loan {
   action transfer_owner_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: UnknownType = ConstructorFortransfer_owner.oneOf()
+    
+    pure val message: UnknownType = ConstructorFortransfer_owner
     execute_message(message, max_funds)
   }
   pure def is_trusted(sender: Addr, config: Config): bool = trusted
@@ -183,7 +188,8 @@ module mock_arb {
   action arbitrage_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: UnknownType = ConstructorForarbitrage.oneOf()
+    
+    pure val message: UnknownType = ConstructorForarbitrage
     execute_message(message, max_funds)
   }
   pure val DENOM = "uawesome"
@@ -290,7 +296,8 @@ module proxy {
   action request_flash_loan_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: UnknownType = ConstructorForrequest_flash_loan.oneOf()
+    
+    pure val message: UnknownType = ConstructorForrequest_flash_loan
     execute_message(message, max_funds)
   }
   pure val DENOM = "uawesome"

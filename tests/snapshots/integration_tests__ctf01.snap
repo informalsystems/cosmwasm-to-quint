@@ -39,7 +39,8 @@ module oaksecurity_cosmwasm_ctf_01 {
   action deposit_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_Deposit.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_Deposit
     execute_message(message, max_funds)
   }
   pure def withdraw(state: ContractState, env: Env, info: MessageInfo, ids: List[int]): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)

@@ -47,7 +47,8 @@ module oaksecurity_cosmwasm_ctf_05 {
   action deposit_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_Deposit.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_Deposit
     execute_message(message, max_funds)
   }
   pure def withdraw(state: ContractState, info: MessageInfo, amount: int): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -82,7 +83,8 @@ module oaksecurity_cosmwasm_ctf_05 {
   action accept_owner_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_AcceptOwnership.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_AcceptOwnership
     execute_message(message, max_funds)
   }
   pure def drop_owner(state: ContractState, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -90,7 +92,8 @@ module oaksecurity_cosmwasm_ctf_05 {
   action drop_owner_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_DropOwnershipProposal.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_DropOwnershipProposal
     execute_message(message, max_funds)
   }
   pure def assert_owner(store: <missing-type>, sender: Addr): Result[(), ContractError] = Ok(())
