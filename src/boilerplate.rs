@@ -154,7 +154,7 @@ pub fn post_items(ctx: &Context) -> String {
         .join(",\n");
 
     let special_actions = ["execute", "instantiate", "reply"];
-    let reply = if !ctx.stateful_ops.contains(&"reply".to_string()) {
+    let reply = if !ctx.ops_with_mutability.contains(&"reply".to_string()) {
         // Generate default reply to be given for the message handler
         "
 
@@ -166,7 +166,7 @@ pub fn post_items(ctx: &Context) -> String {
     };
 
     let actions = ctx
-        .stateful_ops
+        .ops_with_mutability
         .iter()
         .filter(|op| !special_actions.contains(&op.as_str()))
         .map(|op| format!("{op}_action"))

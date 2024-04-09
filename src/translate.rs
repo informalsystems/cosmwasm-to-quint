@@ -434,7 +434,7 @@ impl Translatable for Function<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         // If one of the params is of type DepsMut, and the return type is "Result", this is a state transformer,
         // and therefore should take the state as an argument and return it
-        let mut has_state = false;
+        let mut has_mutability = false;
 
         let param_tuples = zip(self.decl.inputs, self.body.params);
         let input = param_tuples
@@ -442,7 +442,7 @@ impl Translatable for Function<'_> {
                 let translated_param = param.translate(ctx);
                 let translated_type = input.translate(ctx);
                 if translated_type == "ContractStateMut" {
-                    has_state = true;
+                    has_mutability = true;
                     return "state: ContractState".to_string();
                 }
                 if translated_type == "ContractState" {
@@ -460,8 +460,8 @@ impl Translatable for Function<'_> {
             return "".to_string();
         }
 
-        if has_state {
-            ctx.stateful_ops.push(ctx.current_item_name.clone());
+        if has_mutability {
+            ctx.ops_with_mutability.push(ctx.current_item_name.clone());
 
             format!("({input}): ({output}, ContractState)")
         } else {
@@ -519,12 +519,12 @@ impl Translatable for rustc_hir::Item<'_> {
                     return "".to_string();
                 }
 
-                let has_state = ctx.stateful_ops.contains(&name.to_string());
+                let has_mutability = ctx.ops_with_mutability.contains(&name.to_string());
                 let body_value = body.value.translate(ctx);
 
-                if !has_state || name == "execute" {
-                    // Direct translation for non-stateful functions (i.e.
-                    // helpers) Also for execute, since it's a special case - it
+                if !has_mutability || name == "execute" {
+                    // Direct translation for functions with no mutability (i.e.
+                    // helpers). Also for execute, since it's a special case - it
                     // has a match statement to call other actions. Excute is
                     // always called from `execute_message` from the boilerplate
                     // part
