@@ -38,7 +38,8 @@ module oaksecurity_cosmwasm_ctf_10 {
   action mint_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message: ExecuteMsg = ExecuteMsg_Mint.oneOf()
+    
+    pure val message: ExecuteMsg = ExecuteMsg_Mint
     execute_message(message, max_funds)
   }
   pure def reply(state: ContractState, _env: Env, reply: Reply): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
@@ -51,7 +52,7 @@ module oaksecurity_cosmwasm_ctf_10 {
 
   pure val init_contract_state = {
         config: { nft_contract: "s1",mint_per_user: 0,total_tokens: 0 },
-    whitelist: { users: <missing-type> }
+    whitelist: { users: [] }
   }
 
   action execute_step = all {

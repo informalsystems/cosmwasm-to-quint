@@ -98,6 +98,10 @@ fn init_value_for_type(ctx: &Context, ty: String) -> String {
         return "Map()".to_string();
     }
 
+    if ty.starts_with("List") {
+        return "[]".to_string();
+    }
+
     if ctx.structs.contains_key(&ty) {
         // Type is a struct, initialize fields recursively
         let fields = ctx.structs.get(&ty).unwrap();
@@ -116,7 +120,6 @@ fn init_value_for_type(ctx: &Context, ty: String) -> String {
     }
 
     match ty.as_str() {
-        "List" => "List()".to_string(),
         "str" => "\"\"".to_string(),
         "int" => "0".to_string(),
         "Addr" => "\"s1\"".to_string(),

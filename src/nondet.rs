@@ -153,7 +153,7 @@ impl NondetValue for Constructor {
     fn nondet_info(&self, ctx: &mut Context, ident: &str) -> NondetInfo {
         if self.fields.is_empty() {
             // If the constuctor has no field, it can only contain one value, and that is deterministic
-            return (vec![], self.name.clone());
+            return (vec!["".to_string()], self.name.clone());
         }
 
         let (defs, record) = self.fields.nondet_info(ctx, ident);
