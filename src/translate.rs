@@ -44,7 +44,7 @@ impl Translatable for Ident {
             ("i32", "int"),
             ("Decimal", "int"),
             ("Timestamp", "int"),
-            ("DepsMut", "ContractState"),
+            ("DepsMut", "ContractStateMut"), // Not an actual translation, but a placeholder
             ("Deps", "ContractState"),
             ("Ok", "Ok"),
             ("deps", "state"),
@@ -432,7 +432,7 @@ impl Translatable for rustc_hir::FnRetTy<'_> {
 
 impl Translatable for Function<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
-        // If one of the params is of type Deps or DepsMut, and the return type is "Result", this is a state transformer,
+        // If one of the params is of type DepsMut, and the return type is "Result", this is a state transformer,
         // and therefore should take the state as an argument and return it
         let mut has_state = false;
 
@@ -441,8 +441,11 @@ impl Translatable for Function<'_> {
             .map(|(input, param)| {
                 let translated_param = param.translate(ctx);
                 let translated_type = input.translate(ctx);
-                if translated_type == "ContractState" {
+                if translated_type == "ContractStateMut" {
                     has_state = true;
+                    return "state: ContractState".to_string();
+                }
+                if translated_type == "ContractState" {
                     return "state: ContractState".to_string();
                 }
                 format!("{}: {}", translated_param, translated_type)
