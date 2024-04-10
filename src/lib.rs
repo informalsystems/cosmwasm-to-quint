@@ -145,7 +145,7 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
             },
         )]),
         structs: HashMap::new(),
-        stateful_ops: vec![],
+        ops_with_mutability: vec![],
         contract_state: vec![],
         // scoped
         record_fields: vec![],

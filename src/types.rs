@@ -33,7 +33,7 @@ pub struct Context<'tcx> {
     pub message_type_for_action: HashMap<String, String>,
     pub constructors: HashMap<String, Constructor>,
     pub structs: HashMap<String, Vec<Field>>,
-    pub stateful_ops: Vec<String>,
+    pub ops_with_mutability: Vec<String>,
     pub tcx: TyCtxt<'tcx>,
     pub contract_state: Vec<(String, String)>,
     // scoped
