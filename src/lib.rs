@@ -31,7 +31,7 @@ use translate::Translatable;
 use crate::types::{Constructor, Context};
 
 use crate::boilerplate::{post_items, pre_items};
-use crate::test_generation::structs::translate_structs;
+use crate::test_generation::generate_tests;
 
 // This struct is the plugin provided to the rustc_plugin framework,
 // and it must be exported for use by the CLI/driver binaries.
@@ -181,7 +181,7 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     println!("{}", translated_items);
     println!("{}", post_items(&ctx));
     println!("-----------------");
-    println!("{}", translate_structs(ctx));
+    println!("{}", generate_tests(ctx.clone()));
 }
 
 // This is the main entry point for the plugin. It prints the generated quint code to STDOUT.
