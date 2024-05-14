@@ -485,6 +485,9 @@ impl Translatable for rustc_hir::Item<'_> {
           || name.starts_with("ContractError")
           // skip items from proto files
           || format!("{:?}", self.span).contains("protos")
+          // skip items from generated test file
+          // TODO: use parameterized name instead of hardcoded
+          || format!("{:?}", self.span).contains("src/mbt.rs")
         {
             // skip irrelevant items
             return "".to_string();

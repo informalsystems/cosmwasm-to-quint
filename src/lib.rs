@@ -5,6 +5,7 @@
 pub mod boilerplate;
 pub mod nondet;
 pub mod state_extraction;
+pub mod test_generation;
 pub mod translate;
 pub mod types;
 
@@ -30,6 +31,7 @@ use translate::Translatable;
 use crate::types::{Constructor, Context};
 
 use crate::boilerplate::{post_items, pre_items};
+use crate::test_generation::structs::translate_structs;
 
 // This struct is the plugin provided to the rustc_plugin framework,
 // and it must be exported for use by the CLI/driver binaries.
@@ -147,6 +149,11 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
         structs: HashMap::new(),
         ops_with_mutability: vec![],
         contract_state: vec![],
+        nondet_picks: vec![
+            ("sender".to_string(), "Addr".to_string()),
+            ("denom".to_string(), "str".to_string()),
+            ("amount".to_string(), "int".to_string()),
+        ],
         // scoped
         record_fields: vec![],
         struct_fields: vec![],
@@ -173,6 +180,8 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     println!("{}", pre_items(crate_name));
     println!("{}", translated_items);
     println!("{}", post_items(&ctx));
+    println!("-----------------");
+    println!("{}", translate_structs(ctx));
 }
 
 // This is the main entry point for the plugin. It prints the generated quint code to STDOUT.
