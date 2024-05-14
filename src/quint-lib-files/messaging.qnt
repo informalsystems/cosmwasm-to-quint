@@ -5,18 +5,18 @@ module messaging {
   import bank from "./bank"
   import basicSpells.* from "./basicSpells"
 
-  pure def get_message(return_val: Result[Response, ContractError]): (Result[Response, ContractError], Option[SubMsg]) = {
-    match return_val {
+  pure def get_message(result_val: Result[Response, ContractError]): (Result[Response, ContractError], Option[SubMsg]) = {
+    match result_val {
       | Ok(response) =>
         if (response.messages.indices().size() > 0) {
           val submsg = response.messages.head()
-          val new_return = Ok({ ...response, messages: response.messages.listFilter(m => m != submsg) })
-          (new_return, Some(submsg))
+          val new_result = Ok({ ...response, messages: response.messages.listFilter(m => m != submsg) })
+          (new_result, Some(submsg))
         } else {
-          (return_val, None)
+          (result_val, None)
         }
 
-      | _ => (return_val, None)
+      | _ => (result_val, None)
     }
   }
 
@@ -29,16 +29,16 @@ module messaging {
             | Ok(new_bank) =>
                if (should_reply_on_success(submsg.reply_on)) {
                  val reply_result = reply(state.contract_state, env, { id: submsg.id, result: Ok({ events: [/* TODO */], data: None }) })
-                 { bank: new_bank, return: reply_result._1, contract_state: reply_result._2 }
+                 { bank: new_bank, result: reply_result._1, contract_state: reply_result._2 }
                } else {
                  { ...state, bank: new_bank }
                }
             | Err(err) =>
                if (should_reply_on_error(submsg.reply_on)) {
                  val reply_result = reply(state.contract_state, env, { id: submsg.id, result: Err(err) })
-                 { ...state, return: reply_result._1, contract_state: reply_result._2 }
+                 { ...state, result: reply_result._1, contract_state: reply_result._2 }
                } else {
-                  state
+                  { ...state, result: Err(err) }
                }
            }
         }

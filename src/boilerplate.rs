@@ -11,7 +11,7 @@ pub const IMPORTS: &str = "
 
 pub const VARS: &str = "
   var contract_state: ContractState
-  var return: Result
+  var result: Result
   var bank: bank::Bank
   var time: int
 ";
@@ -34,7 +34,7 @@ pub const INITIALIZERS: &str = "
   action init = all {
     contract_state' = init_contract_state,
     bank' = init_bank_state,
-    return' = Err(\"No previous request\"),
+    result' = Err(\"No previous request\"),
     time' = 0,
   }
 ";
@@ -52,7 +52,7 @@ pub const ACTIONS: &str = "
       bank.get(sender).get(denom) >= amount,
       bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
                   .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
-      return' = r._1,
+      result' = r._1,
       contract_state' = r._2,
     }
   }
@@ -60,16 +60,16 @@ pub const ACTIONS: &str = "
   action advance_time = time' = time + 1
 
   action step = {
-    val message_getting = get_message(return)
-    val new_return = message_getting._1
+    val message_getting = get_message(result)
+    val new_result = message_getting._1
     val opt_message = message_getting._2
     match opt_message {
       | Some(submsg) => {
-          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val current_state = { bank: bank, result: new_result, contract_state: contract_state }
           val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
           all {
             bank' = new_state.bank,
-            return' = new_state.return,
+            result' = new_state.result,
             contract_state' = new_state.contract_state,
             advance_time,
           }
