@@ -36,6 +36,7 @@ pub struct Context<'tcx> {
     pub ops_with_mutability: Vec<String>,
     pub tcx: TyCtxt<'tcx>,
     pub contract_state: Vec<(String, String)>,
+    pub nondet_picks: Vec<(String, String)>,
     // scoped
     // FIXME: This should be a stack to account for nested scopes.
     // No need to worry about nested scopes for stub generation.
