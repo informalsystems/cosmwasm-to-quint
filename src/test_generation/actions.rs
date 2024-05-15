@@ -1,8 +1,22 @@
+use crate::boilerplate::init_value_for_type;
 use crate::types::Context;
 use itertools::Itertools;
 
 pub fn translate_actions(ctx: Context) -> String {
     let msgs = ctx.message_type_for_action.iter().map(|(action, ty)| {
+        if action == "instantiate" {
+            let msg_struct = ctx.structs.get("InstantiateMsg").unwrap();
+            let msg_fields = msg_struct
+                .iter()
+                .map(|f| {
+                    let body = init_value_for_type(&ctx, f.ty.clone());
+
+                    format!("{}: {}", f.name, body)
+                })
+                .collect_vec();
+            let msg = format!("InstantiateMsg {{ {} }}", msg_fields.join(", "));
+            return translate_init(msg);
+        }
         if action == "execute" || action == "instantiate" || action == "reply" {
             return "".to_string();
         }
@@ -12,7 +26,10 @@ pub fn translate_actions(ctx: Context) -> String {
             .iter()
             .map(|f| {
                 let body = type_conversion(
-                    format!("to_option(nondet_picks.{}.clone()).unwrap()", f.name),
+                    format!(
+                        "to_option(nondet_picks.message_{}.clone()).unwrap()",
+                        f.name
+                    ),
                     f.ty.clone(),
                 );
 
@@ -26,7 +43,7 @@ pub fn translate_actions(ctx: Context) -> String {
             .map(|f| format!("{}: message_{}", f.name, f.name))
             .collect_vec()
             .join(", ");
-        let msg = format!("{} {{ {} }}", constructor.name, fields);
+        let msg = format!("{} {{ {} }}", constructor.name.replace('_', "::"), fields);
 
         translate_action(action, msg, nondet_picks.clone())
     });
@@ -58,7 +75,7 @@ fn translate_action(action: &str, msg: String, nondet_picks: Vec<String>) -> Str
                     );
 
                     compare_result(to_result(s.value.result.clone()), res)
-                }}
+                }
 
 ";
 
@@ -68,6 +85,51 @@ fn translate_action(action: &str, msg: String, nondet_picks: Vec<String>) -> Str
         nondet_picks.clone().join("\n"),
         msg,
         footer,
+    )
+}
+
+fn translate_init(msg: String) -> String {
+    let header = "
+               \"q::init\" => {
+                    println!(\"Initializing contract.\");
+
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+"
+    .to_string();
+
+    let footer = "
+                    println!(\"Message: {:?}\", msg);
+                    println!(\"Sender: {:?}\", sender);
+                    println!(\"Funds: {:?}\", funds);
+
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        \"test\",
+                        None,
+                    ).unwrap();
+
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
+                }
+
+";
+
+    format!(
+        "{}\n                    let msg = {};{}",
+        header, msg, footer,
     )
 }
 

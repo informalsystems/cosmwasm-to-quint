@@ -26,19 +26,6 @@ pub const VALUES: &str = "
   pure val MAX_AMOUNT = 200
 ";
 
-pub const INITIALIZERS: &str = "
-  pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
-
-  val env_val = { block: { time: time } }
-
-  action init = all {
-    contract_state' = init_contract_state,
-    bank' = init_bank_state,
-    result' = Err(\"No previous request\"),
-    time' = 0,
-  }
-";
-
 pub const ACTIONS: &str = "
   action execute_message(message, max_funds) = {
     nondet sender = ADDRESSES.oneOf()
@@ -90,10 +77,43 @@ pub fn pre_items(crate_name: &str) -> String {
     )
 }
 
+pub fn initializers(ctx: &Context) -> String {
+    let instatiate_msg = ctx.message_type_for_action.get("instantiate").unwrap();
+    format!(
+        "
+  pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
+
+  val env_val = {{ block: {{ time: time }} }}
+
+  action init = {{
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = 0
+
+    nondet sender = Set(\"admin\").oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{{ denom: denom, amount: amount }}]
+    val info = {{ sender: sender, funds: funds }}
+
+    pure val message: InstantiateMsg = {}
+    pure val r = instantiate(init_contract_state, {{ block: {{ time: 0 }} }}, info, message)
+
+    all {{
+      contract_state' = r._2,
+      bank' = init_bank_state,
+      result' = r._1,
+      time' = 0,
+    }}
+  }}
+",
+        init_value_for_type(ctx, instatiate_msg.clone())
+    )
+}
+
 // TODO: This doesn't belong here, but I'm not sure where to put it
 /// Generates a default value for a given type, used to initialize values of all
 /// contract state fields
-fn init_value_for_type(ctx: &Context, ty: String) -> String {
+pub fn init_value_for_type(ctx: &Context, ty: String) -> String {
     if ty.contains("->") {
         return "Map()".to_string();
     }
@@ -190,8 +210,9 @@ pub fn post_items(ctx: &Context) -> String {
     advance_time,
   }}
 {reply}
-{INITIALIZERS}
+{}
 {ACTIONS}
-}}"
+}}",
+        initializers(ctx)
     )
 }
