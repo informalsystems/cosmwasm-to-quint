@@ -50,7 +50,7 @@ fn format_struct(name: String, fields: Vec<(String, String)>, optional: bool) ->
             } else {
                 actual_type
             };
-            format!("        {}: {}", name, typ)
+            format!("        pub {}: {}", name, typ)
         })
         .join(",\n");
     format!(
