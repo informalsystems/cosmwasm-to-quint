@@ -177,11 +177,36 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
         return;
     }
 
-    println!("{}", pre_items(crate_name));
-    println!("{}", translated_items);
-    println!("{}", post_items(&ctx));
-    println!("-----------------");
-    println!("{}", generate_tests(ctx.clone()));
+    let module = format!(
+        "{}\n{}\n{}\n",
+        pre_items(crate_name),
+        translated_items,
+        post_items(&ctx)
+    );
+    let tests = generate_tests(ctx.clone());
+
+    // create generated directory
+    std::fs::create_dir_all("quint/lib").expect("Unable to create directory");
+
+    let bank = include_str!("./quint-lib-files/bank.qnt");
+    let basic_spells = include_str!("./quint-lib-files/basicSpells.qnt");
+    let bounded_uint = include_str!("./quint-lib-files/BoundedUInt.qnt");
+    let cw_types = include_str!("./quint-lib-files/cw_types.qnt");
+    let cw_utils = include_str!("./quint-lib-files/cw_utils.qnt");
+    let messaging = include_str!("./quint-lib-files/messaging.qnt");
+
+    std::fs::write("quint/lib/bank.qnt", bank).expect("Unable to write file");
+    std::fs::write("quint/lib/basicSpells.qnt", basic_spells).expect("Unable to write file");
+    std::fs::write("quint/lib/BoundedUInt.qnt", bounded_uint).expect("Unable to write file");
+    std::fs::write("quint/lib/cw_types.qnt", cw_types).expect("Unable to write file");
+    std::fs::write("quint/lib/cw_utils.qnt", cw_utils).expect("Unable to write file");
+    std::fs::write("quint/lib/messaging.qnt", messaging).expect("Unable to write file");
+
+    // write module to file
+    std::fs::write("quint/stubs.qnt", module).expect("Unable to write file");
+
+    // write tests to file
+    std::fs::write("src/mbt.rs", tests).expect("Unable to write file");
 }
 
 // This is the main entry point for the plugin. It prints the generated quint code to STDOUT.

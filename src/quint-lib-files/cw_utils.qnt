@@ -10,7 +10,7 @@ module cw_utils {
     } else if (info.funds.indices().size() == 1) {
       val coin = info.funds[0]
       if (coin.amount == 0) {
-        Err("No funds")
+        Err("Zero funds")
       } else {
         Ok(coin)
       }
@@ -24,7 +24,7 @@ module cw_utils {
       | Err(err) => Err(err)
       | Ok(coin) => {
         if (coin.denom != denom) {
-          Err("Missing Denom")
+          Err("Wrong Denom")
         } else {
           Ok(coin.amount)
         }

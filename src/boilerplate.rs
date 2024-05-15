@@ -3,10 +3,11 @@ use itertools::Itertools;
 use crate::types::Context;
 
 pub const IMPORTS: &str = "
-  import basicSpells.* from \"../lib/basicSpells\"
-  import cw_types.* from \"../lib/cw_types\"
-  import messaging.* from \"../lib/messaging\"
-  import bank from \"../lib/bank\"
+  import basicSpells.* from \"./lib/basicSpells\"
+  import cw_types.* from \"./lib/cw_types\"
+  import cw_utils.* from \"./lib/cw_utils\"
+  import messaging.* from \"./lib/messaging\"
+  import bank from \"./lib/bank\"
 ";
 
 pub const VARS: &str = "
@@ -17,11 +18,11 @@ pub const VARS: &str = "
 ";
 
 pub const CONTRACT_ADDRESS: &str = "
-  pure val CONTRACT_ADDRESS = \"<contract>\"
+  pure val CONTRACT_ADDRESS = \"contract0\"
 ";
 
 pub const VALUES: &str = "
-  pure val ADDRESSES = Set(\"s1\", \"s2\", \"s3\", CONTRACT_ADDRESS)
+  pure val ADDRESSES = Set(\"sender1\", \"sender2\", \"sender3\", CONTRACT_ADDRESS)
   pure val DENOMS = Set(\"d1\", \"uawesome\")
   pure val MAX_AMOUNT = 200
 ";
@@ -37,8 +38,11 @@ pub const ACTIONS: &str = "
     val r = execute(contract_state, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
-      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
-                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
+      match r._1 {
+        | Ok(_) => bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                               .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount))
+        | Err(_) => bank' = bank
+      },
       result' = r._1,
       contract_state' = r._2,
     }

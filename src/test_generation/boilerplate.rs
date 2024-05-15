@@ -2,7 +2,6 @@ pub const TEST_HEADER: &str = "
 #[cfg(test)]
 pub mod tests {
     use crate::{
-        contract::{DENOM, LOCK_PERIOD},
         mbt::state_structs::*,
         msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     };
@@ -12,7 +11,8 @@ pub mod tests {
     use num_bigint::BigInt;
     use num_traits::{ToPrimitive, Zero};
 
-    pub const ADMIN: &str = \"admin\";
+    pub const DENOM: &str = \"uawesome\";
+    pub const TICK: u64 = 1;
 
     pub fn mint_tokens(mut app: App, recipient: String, denom: String, amount: Uint128) -> App {
         app.sudo(cw_multi_test::SudoMsg::Bank(
@@ -103,7 +103,7 @@ pub mod tests {
         };
 
         // load trace data
-        let data = include_str!(\"./out/test.itf.json\");
+        let data = include_str!(\"../quint/test.itf.json\");
         let trace: itf::Trace<State> = trace_from_str(data).unwrap();
 
         for s in trace.states {
@@ -129,11 +129,11 @@ pub const TEST_FOOTER: &str = "
             }
             compare_state(&test_state, &app, &(s.value.clone()));
             println!(
-                \"clock is advancing for {} seconds (LOCK_PERIOD)\",
-                LOCK_PERIOD
+                \"clock is advancing for {} seconds\",
+                TICK
             );
             app.update_block(|block| {
-                block.time = block.time.plus_seconds(LOCK_PERIOD);
+                block.time = block.time.plus_seconds(TICK);
             });
             println!(\"-----------------------------------\");
         }

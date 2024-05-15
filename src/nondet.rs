@@ -83,7 +83,7 @@ fn nondet_value_for_list(ty: &rustc_hir::Ty<'_>, ctx: &mut Context, ident: &str)
         return (element_defs, format!("[{element_value}]"));
     }
 
-    let value = format!("{element_value}.allListsUpTo(3).oneOf()");
+    let value = format!("{element_value}.allListsUpTo(2)");
 
     (vec![], value)
 }
