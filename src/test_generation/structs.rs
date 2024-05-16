@@ -7,6 +7,7 @@ pub mod state_structs {
     use num_bigint::BigInt;
     use serde::Deserialize;
     use std::collections::HashMap;
+    use itf::de::{self, As};
 "
     .to_string();
     for (name, fields) in ctx.structs {
@@ -44,13 +45,17 @@ fn format_struct(name: String, fields: Vec<(String, String)>, optional: bool) ->
     let fields = fields
         .iter()
         .map(|(name, ty)| {
-            let actual_type = translate_type(ty.clone());
-            let typ = if optional {
-                format!("QuintOption<{}>", actual_type)
+            let typ = translate_type(ty.clone());
+            if optional {
+                format!(
+                    "
+        #[serde(with = \"As::<de::Option::<_>>\")]
+        pub {}: Option<{}>",
+                    name, typ
+                )
             } else {
-                actual_type
-            };
-            format!("        pub {}: {}", name, typ)
+                format!("        pub {}: {}", name, typ)
+            }
         })
         .join(",\n");
     format!(
@@ -91,20 +96,6 @@ fn translate_type(ty: String) -> String {
 }
 
 const BOILERPLATE_STRUCTS: &str = "
-    #[derive(Copy, Clone, Debug, Deserialize)]
-    #[serde(tag = \"tag\", content = \"value\")]
-    pub enum QuintOption<T> {
-        Some(T),
-        None,
-    }
-
-    #[derive(Copy, Clone, Debug, Deserialize)]
-    #[serde(tag = \"tag\", content = \"value\")]
-    pub enum QuintResult<T, E> {
-        Ok(T),
-        Err(E),
-    }
-
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -117,23 +108,10 @@ const BOILERPLATE_STRUCTS: &str = "
     pub struct State {
         pub contract_state: ContractState,
         pub bank: HashMap<String, HashMap<String, BigInt>>,
-        pub result: QuintResult<Response, String>,
+        #[serde(with = \"As::<de::Result::<_, _>>\")]
+        pub result: Result<Response, String>,
         pub action_taken: String,
         pub nondet_picks: NondetPicks,
         pub time: BigInt,
-    }
-
-    pub fn to_option<T>(op: QuintOption<T>) -> Option<T> {
-        match op {
-            QuintOption::None => None,
-            QuintOption::Some(a) => Some(a),
-        }
-    }
-
-    pub fn to_result<T, E>(res: QuintResult<T, E>) -> Result<T, E> {
-        match res {
-            QuintResult::Ok(a) => Ok(a),
-            QuintResult::Err(e) => Err(e),
-        }
     }
 ";

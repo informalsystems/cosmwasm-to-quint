@@ -107,7 +107,7 @@ pub mod tests {
         let trace: itf::Trace<State> = trace_from_str(data).unwrap();
 
         for s in trace.states {
-            let last_result = to_result(s.value.result.clone());
+            let last_result = s.value.result.clone();
             if last_result.is_ok() && !last_result.unwrap().messages.is_empty() {
                 println!(\"Processing messages, skipping\");
                 continue;
@@ -115,9 +115,9 @@ pub mod tests {
 
             let action_taken = &s.value.action_taken;
             let nondet_picks = &s.value.nondet_picks;
-            let amount = to_option(nondet_picks.amount.clone());
-            let denom = to_option(nondet_picks.denom.clone());
-            let sender = to_option(nondet_picks.sender.clone());
+            let amount = nondet_picks.amount.clone();
+            let denom = nondet_picks.denom.clone();
+            let sender = nondet_picks.sender.clone();
 
             println!(\"Step number: {:?}\", s.meta.index);
 

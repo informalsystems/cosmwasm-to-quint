@@ -26,10 +26,7 @@ pub fn translate_actions(ctx: Context) -> String {
             .iter()
             .map(|f| {
                 let body = type_conversion(
-                    format!(
-                        "to_option(nondet_picks.message_{}.clone()).unwrap()",
-                        f.name
-                    ),
+                    format!("nondet_picks.message_{}.clone().unwrap()", f.name),
                     f.ty.clone(),
                 );
 
@@ -74,7 +71,7 @@ fn translate_action(action: &str, msg: String, nondet_picks: Vec<String>) -> Str
                         &funds,
                     );
 
-                    compare_result(to_result(s.value.result.clone()), res)
+                    compare_result(s.value.result.clone(), res)
                 }
 
 ";
