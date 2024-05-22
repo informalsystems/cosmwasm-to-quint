@@ -44,7 +44,20 @@ fn run(dir: &str, f: impl FnOnce(&mut Command)) -> Result<String> {
         String::from_utf8(output.stderr)?
     );
 
-    Ok(String::from_utf8(output.stdout)?)
+    let quint_file = ws.join("quint/stubs.qnt");
+    ensure!(quint_file.exists(), "quint/stubs.qnt not found");
+    let quint_file_contents =
+        fs::read_to_string(quint_file).expect("Should have been able to read the file");
+
+    let mbt_file = ws.join("src/mbt.rs");
+    ensure!(mbt_file.exists(), "src/mbt.rs not found");
+    let mbt_file_contents =
+        fs::read_to_string(mbt_file).expect("Should have been able to read the file");
+
+    Ok(format!(
+        "quint/stubs.qnt:\n{}\n\nsrc/mbt.rs:\n{}",
+        quint_file_contents, mbt_file_contents
+    ))
 }
 
 #[test]
