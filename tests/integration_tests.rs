@@ -1,4 +1,4 @@
-use std::{env, fs, path::Path, process::Command, sync::Once};
+use std::{env, fs, io, path::Path, process::Command, sync::Once};
 
 use anyhow::{ensure, Context, Result};
 
@@ -44,20 +44,47 @@ fn run(dir: &str, f: impl FnOnce(&mut Command)) -> Result<String> {
         String::from_utf8(output.stderr)?
     );
 
-    let quint_file = ws.join("quint/stubs.qnt");
-    ensure!(quint_file.exists(), "quint/stubs.qnt not found");
-    let quint_file_contents =
-        fs::read_to_string(quint_file).expect("Should have been able to read the file");
+    let mut quint_entries = fs::read_dir(ws.join("quint"))?
+        .map(|res| res.map(|e| e.path()))
+        .collect::<Result<Vec<_>, io::Error>>()?;
+    quint_entries.sort();
 
-    let mbt_file = ws.join("src/mbt.rs");
-    ensure!(mbt_file.exists(), "src/mbt.rs not found");
-    let mbt_file_contents =
-        fs::read_to_string(mbt_file).expect("Should have been able to read the file");
+    let quint_files = quint_entries
+        .iter()
+        .map(|path| {
+            if path.is_dir() {
+                return "".to_string();
+            }
+            format!(
+                "{}:\n{}",
+                path.clone().file_name().unwrap().to_string_lossy(),
+                fs::read_to_string(path).expect("Should have been able to read the file"),
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("\n\n");
 
-    Ok(format!(
-        "quint/stubs.qnt:\n{}\n\nsrc/mbt.rs:\n{}",
-        quint_file_contents, mbt_file_contents
-    ))
+    let mut mbt_entries = fs::read_dir(ws.join("src/mbt"))?
+        .map(|res| res.map(|e| e.path()))
+        .collect::<Result<Vec<_>, io::Error>>()?;
+    mbt_entries.sort();
+
+    let mbt_files = mbt_entries
+        .iter()
+        .map(|path| {
+            if path.is_dir() {
+                return "".to_string();
+            }
+            format!(
+                "{}:\n{}",
+                path.clone().file_name().unwrap().to_string_lossy(),
+                fs::read_to_string(path).expect("Should have been able to read the file"),
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("\n\n");
+
+    Ok(format!("quint:\n{}\n\nmbt:\n{}", quint_files, mbt_files))
 }
 
 #[test]

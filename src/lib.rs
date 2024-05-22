@@ -127,11 +127,11 @@ fn translate_all_items(tcx: TyCtxt) {
 
     items_by_crate.into_iter().for_each(|(crate_id, items)| {
         let crate_name = tcx.crate_name(crate_id);
-        traslate_items(tcx, crate_name.as_str(), items.collect_vec())
+        translate_items(tcx, crate_name.as_str(), items.collect_vec())
     });
 }
 
-fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
+fn translate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     let mut ctx = Context {
         tcx,
         message_type_for_action: HashMap::from([(
@@ -185,6 +185,17 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     );
     let tests = generate_tests(ctx.clone());
 
+    // write module to file
+    std::fs::write(format!("quint/{}_stubs.qnt", crate_name), module)
+        .expect("Unable to write file");
+
+    // write tests to file
+    std::fs::create_dir_all("src/mbt").expect("Unable to create directory");
+    std::fs::write(format!("src/mbt/{}.rs", crate_name), tests).expect("Unable to write file");
+}
+
+// This is the main entry point for the plugin. It prints the generated quint code to STDOUT.
+fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     // create generated directory
     std::fs::create_dir_all("quint/lib").expect("Unable to create directory");
 
@@ -202,14 +213,5 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     std::fs::write("quint/lib/cw_utils.qnt", cw_utils).expect("Unable to write file");
     std::fs::write("quint/lib/messaging.qnt", messaging).expect("Unable to write file");
 
-    // write module to file
-    std::fs::write("quint/stubs.qnt", module).expect("Unable to write file");
-
-    // write tests to file
-    std::fs::write("src/mbt.rs", tests).expect("Unable to write file");
-}
-
-// This is the main entry point for the plugin. It prints the generated quint code to STDOUT.
-fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     translate_all_items(tcx);
 }

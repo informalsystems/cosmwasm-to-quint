@@ -2,7 +2,10 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-quint/stubs.qnt:
+quint:
+
+
+oaksecurity_cosmwasm_ctf_01_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_01 {
   
   import basicSpells.* from "./lib/basicSpells"
@@ -151,7 +154,8 @@ module oaksecurity_cosmwasm_ctf_01 {
 }
 
 
-src/mbt.rs:
+mbt:
+oaksecurity_cosmwasm_ctf_01.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;

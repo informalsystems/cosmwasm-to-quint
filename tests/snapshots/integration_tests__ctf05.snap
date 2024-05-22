@@ -2,7 +2,10 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-quint/stubs.qnt:
+quint:
+
+
+oaksecurity_cosmwasm_ctf_05_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_05 {
   
   import basicSpells.* from "./lib/basicSpells"
@@ -198,7 +201,8 @@ module oaksecurity_cosmwasm_ctf_05 {
 }
 
 
-src/mbt.rs:
+mbt:
+oaksecurity_cosmwasm_ctf_05.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -206,14 +210,14 @@ pub mod state_structs {
     use std::collections::HashMap;
     use itf::de::{self, As};
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
-        pub owner: String
-    }
-
-    #[derive(Clone, Debug, Deserialize)]
   pub struct State {
         pub current_owner: String,
         pub proposed_owner: Option[Addr]
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+  pub struct InstantiateMsg {
+        pub owner: String
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -392,6 +396,28 @@ pub mod tests {
 
             match action_taken.as_str() {
 
+               "withdraw_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
                "drop_owner_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -436,34 +462,12 @@ pub mod tests {
 
 
 
-               "withdraw_action" => {
+               "accept_owner_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
 
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
-               "propose_owner_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_new_owner = nondet_picks.message_new_owner.clone().unwrap();
-                    let msg = ExecuteMsg::ProposeNewOwner { new_owner: message_new_owner };
+                    let msg = ExecuteMsg::AcceptOwnership {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -502,12 +506,12 @@ pub mod tests {
 
 
 
-               "accept_owner_action" => {
+               "propose_owner_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
-                    let msg = ExecuteMsg::AcceptOwnership {  };
+                   let message_new_owner = nondet_picks.message_new_owner.clone().unwrap();
+                    let msg = ExecuteMsg::ProposeNewOwner { new_owner: message_new_owner };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

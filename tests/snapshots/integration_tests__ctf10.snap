@@ -2,7 +2,10 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-quint/stubs.qnt:
+quint:
+
+
+oaksecurity_cosmwasm_ctf_10_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_10 {
   
   import basicSpells.* from "./lib/basicSpells"
@@ -136,20 +139,14 @@ module oaksecurity_cosmwasm_ctf_10 {
 }
 
 
-src/mbt.rs:
+mbt:
+oaksecurity_cosmwasm_ctf_10.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
-    #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
-        pub cw721_code_id: BigInt,
-        pub mint_per_user: BigInt,
-        pub whitelisted_users: Vec<String>
-    }
-
     #[derive(Clone, Debug, Deserialize)]
   pub struct Config {
         pub nft_contract: String,
@@ -160,6 +157,13 @@ pub mod state_structs {
     #[derive(Clone, Debug, Deserialize)]
   pub struct Whitelist {
         pub users: Vec<String>
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+  pub struct InstantiateMsg {
+        pub cw721_code_id: BigInt,
+        pub mint_per_user: BigInt,
+        pub whitelisted_users: Vec<String>
     }
 
     #[derive(Clone, Debug, Deserialize)]

@@ -1,11 +1,15 @@
 use crate::boilerplate::init_value_for_type;
-use crate::types::Context;
+use crate::types::{fallback_constructor, Context};
 use itertools::Itertools;
 
 pub fn translate_actions(ctx: Context) -> String {
     let msgs = ctx.message_type_for_action.iter().map(|(action, ty)| {
         if action == "instantiate" {
-            let msg_struct = ctx.structs.get("InstantiateMsg").unwrap();
+            let msg_struct = ctx
+                .structs
+                .get("InstantiateMsg")
+                .cloned()
+                .unwrap_or_default();
             let msg_fields = msg_struct
                 .iter()
                 .map(|f| {
@@ -20,7 +24,12 @@ pub fn translate_actions(ctx: Context) -> String {
         if action == "execute" || action == "instantiate" || action == "reply" {
             return "".to_string();
         }
-        let constructor = ctx.constructors.get(ty.as_str()).unwrap();
+        let constructor = ctx
+            .constructors
+            .get(ty.as_str())
+            .cloned()
+            .unwrap_or_else(|| fallback_constructor(ty));
+
         let nondet_picks = constructor
             .fields
             .iter()

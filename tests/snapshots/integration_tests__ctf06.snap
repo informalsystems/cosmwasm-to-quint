@@ -2,7 +2,10 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-quint/stubs.qnt:
+quint:
+
+
+oaksecurity_cosmwasm_ctf_06_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_06 {
   
   import basicSpells.* from "./lib/basicSpells"
@@ -176,13 +179,21 @@ module oaksecurity_cosmwasm_ctf_06 {
 }
 
 
-src/mbt.rs:
+mbt:
+oaksecurity_cosmwasm_ctf_06.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    #[derive(Clone, Debug, Deserialize)]
+  pub struct InstantiateMsg {
+        pub token: String,
+        pub owner: String,
+        pub window: BigInt
+    }
+
     #[derive(Clone, Debug, Deserialize)]
   pub struct Config {
         pub voting_window: BigInt,
@@ -194,13 +205,6 @@ pub mod state_structs {
   pub struct Proposal {
         pub proposer: String,
         pub timestamp: BigInt
-    }
-
-    #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
-        pub token: String,
-        pub owner: String,
-        pub window: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -370,28 +374,6 @@ pub mod tests {
 
             match action_taken.as_str() {
 
-               "propose_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ExecuteMsg::Propose {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
                "q::init" => {
                     println!("Initializing contract.");
 
@@ -427,6 +409,28 @@ pub mod tests {
 
 
 
+               "propose_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = ExecuteMsg::Propose {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
                "resolve_proposal_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -449,12 +453,12 @@ pub mod tests {
 
 
 
-               "receive_cw20_action" => {
+               "owner_action_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
-                    let msg = ExecuteMsg::Receive {  };
+                   let message_action = nondet_picks.message_action.clone().unwrap();
+                    let msg = ExecuteMsg::OwnerAction { action: message_action };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -471,12 +475,12 @@ pub mod tests {
 
 
 
-               "owner_action_action" => {
+               "receive_cw20_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_action = nondet_picks.message_action.clone().unwrap();
-                    let msg = ExecuteMsg::OwnerAction { action: message_action };
+
+                    let msg = ExecuteMsg::Receive {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

@@ -2,7 +2,10 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-quint/stubs.qnt:
+quint:
+
+
+oaksecurity_cosmwasm_ctf_04_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_04 {
   
   import basicSpells.* from "./lib/basicSpells"
@@ -150,7 +153,8 @@ module oaksecurity_cosmwasm_ctf_04 {
 }
 
 
-src/mbt.rs:
+mbt:
+oaksecurity_cosmwasm_ctf_04.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -163,13 +167,13 @@ pub mod state_structs {
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Balance {
-        pub amount: BigInt
+  pub struct Config {
+        pub total_supply: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Config {
-        pub total_supply: BigInt
+  pub struct Balance {
+        pub amount: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -374,12 +378,12 @@ pub mod tests {
 
 
 
-               "mint_action" => {
+               "burn_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
-                    let msg = ExecuteMsg::Mint {  };
+                   let message_shares = nondet_picks.message_shares.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Burn { shares: message_shares };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -396,12 +400,12 @@ pub mod tests {
 
 
 
-               "burn_action" => {
+               "mint_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_shares = nondet_picks.message_shares.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Burn { shares: message_shares };
+
+                    let msg = ExecuteMsg::Mint {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

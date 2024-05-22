@@ -2,7 +2,10 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-quint/stubs.qnt:
+quint:
+
+
+oaksecurity_cosmwasm_ctf_09_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_09 {
   
   import basicSpells.* from "./lib/basicSpells"
@@ -175,20 +178,14 @@ module oaksecurity_cosmwasm_ctf_09 {
 }
 
 
-src/mbt.rs:
+mbt:
+oaksecurity_cosmwasm_ctf_09.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
-    #[derive(Clone, Debug, Deserialize)]
-  pub struct UserRewardInfo {
-        pub staked_amount: BigInt,
-        pub user_index: BigInt,
-        pub pending_rewards: BigInt
-    }
-
     #[derive(Clone, Debug, Deserialize)]
   pub struct State {
         pub owner: String,
@@ -199,6 +196,13 @@ pub mod state_structs {
     #[derive(Clone, Debug, Deserialize)]
   pub struct InstantiateMsg {
 
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+  pub struct UserRewardInfo {
+        pub staked_amount: BigInt,
+        pub user_index: BigInt,
+        pub pending_rewards: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -368,28 +372,6 @@ pub mod tests {
 
             match action_taken.as_str() {
 
-               "deposit_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ExecuteMsg::Deposit {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
                "increase_reward_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -475,6 +457,28 @@ pub mod tests {
 
                    let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
                     let msg = ExecuteMsg::Withdraw { amount: message_amount };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "deposit_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = ExecuteMsg::Deposit {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

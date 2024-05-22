@@ -2,7 +2,10 @@
 source: tests/integration_tests.rs
 expression: output
 ---
-quint/stubs.qnt:
+quint:
+
+
+oaksecurity_cosmwasm_ctf_02_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_02 {
   
   import basicSpells.* from "./lib/basicSpells"
@@ -172,7 +175,8 @@ module oaksecurity_cosmwasm_ctf_02 {
 }
 
 
-src/mbt.rs:
+mbt:
+oaksecurity_cosmwasm_ctf_02.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -363,28 +367,6 @@ pub mod tests {
 
             match action_taken.as_str() {
 
-               "deposit_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ExecuteMsg::Deposit {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
                "withdraw_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -442,12 +424,12 @@ pub mod tests {
 
 
 
-               "stake_action" => {
+               "unstake_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_lock_amount = nondet_picks.message_lock_amount.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Stake { lock_amount: message_lock_amount };
+                   let message_unlock_amount = nondet_picks.message_unlock_amount.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Unstake { unlock_amount: message_unlock_amount };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -464,12 +446,34 @@ pub mod tests {
 
 
 
-               "unstake_action" => {
+               "deposit_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_unlock_amount = nondet_picks.message_unlock_amount.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Unstake { unlock_amount: message_unlock_amount };
+
+                    let msg = ExecuteMsg::Deposit {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "stake_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_lock_amount = nondet_picks.message_lock_amount.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Stake { lock_amount: message_lock_amount };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
