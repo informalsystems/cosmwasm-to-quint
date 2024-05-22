@@ -182,8 +182,4 @@ module basicSpells {
   pure def toSet(__list: List[a]): Set[a] = {
       __list.foldl(Set(), (__s, __e) => __s.union(Set(__e)))
   }
-
-  pure def allListsUpTo(s: Set[a], max_length: int): Set[List[a]] = {
-    s.allLists().filter(l => l.length() <= max_length)
-  }
 }
