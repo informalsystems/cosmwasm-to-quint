@@ -146,7 +146,7 @@ fn type_conversion(value: String, ty: String) -> String {
 
     match ty.as_str() {
         "str" => value,
-        "int" => format!("{}.to_u64().unwrap()", value),
+        "int" => format!("{}.to_u64().unwrap().into()", value),
         "Addr" => format!("Addr::unchecked_from({})", value),
         _ => value,
     }
