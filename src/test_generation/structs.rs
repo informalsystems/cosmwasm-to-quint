@@ -10,19 +10,23 @@ pub mod state_structs {
     use itf::de::{self, As};
 "
     .to_string();
-    for (name, fields) in ctx.structs {
-        structs.push_str(
-            format_struct(
-                name,
-                fields
-                    .iter()
-                    .map(|f| (f.name.clone(), f.ty.clone()))
-                    .collect_vec(),
-                false,
-            )
-            .as_str(),
-        );
-    }
+    ctx.structs
+        .iter()
+        // Sort items by name so that the generated code is deterministic
+        .sorted_by(|a, b| a.0.cmp(b.0))
+        .for_each(|(name, fields)| {
+            structs.push_str(
+                format_struct(
+                    name.to_string(),
+                    fields
+                        .iter()
+                        .map(|f| (f.name.clone(), f.ty.clone()))
+                        .collect_vec(),
+                    false,
+                )
+                .as_str(),
+            );
+        });
     structs.push_str(
         format_struct(
             "ContractState".to_string(),

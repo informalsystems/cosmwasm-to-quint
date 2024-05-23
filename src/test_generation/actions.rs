@@ -3,56 +3,61 @@ use crate::types::{fallback_constructor, Context};
 use itertools::Itertools;
 
 pub fn translate_actions(ctx: Context) -> String {
-    let msgs = ctx.message_type_for_action.iter().map(|(action, ty)| {
-        if action == "instantiate" {
-            let msg_struct = ctx
-                .structs
-                .get("InstantiateMsg")
+    let msgs = ctx
+        .message_type_for_action
+        .iter()
+        // Sort items by name so that the generated code is deterministic
+        .sorted_by(|a, b| a.0.cmp(b.0))
+        .map(|(action, ty)| {
+            if action == "instantiate" {
+                let msg_struct = ctx
+                    .structs
+                    .get("InstantiateMsg")
+                    .cloned()
+                    .unwrap_or_default();
+                let msg_fields = msg_struct
+                    .iter()
+                    .map(|f| {
+                        let body = init_value_for_type(&ctx, f.ty.clone());
+
+                        format!("{}: {}", f.name, body)
+                    })
+                    .collect_vec();
+                let msg = format!("InstantiateMsg {{ {} }}", msg_fields.join(", "));
+                return translate_init(msg);
+            }
+            if action == "execute" || action == "instantiate" || action == "reply" {
+                return "".to_string();
+            }
+            let constructor = ctx
+                .constructors
+                .get(ty.as_str())
                 .cloned()
-                .unwrap_or_default();
-            let msg_fields = msg_struct
+                .unwrap_or_else(|| fallback_constructor(ty));
+
+            let nondet_picks = constructor
+                .fields
                 .iter()
                 .map(|f| {
-                    let body = init_value_for_type(&ctx, f.ty.clone());
+                    let body = type_conversion(
+                        format!("nondet_picks.message_{}.clone().unwrap()", f.name),
+                        f.ty.clone(),
+                    );
 
-                    format!("{}: {}", f.name, body)
+                    format!("                   let message_{} = {};", f.name, body)
                 })
                 .collect_vec();
-            let msg = format!("InstantiateMsg {{ {} }}", msg_fields.join(", "));
-            return translate_init(msg);
-        }
-        if action == "execute" || action == "instantiate" || action == "reply" {
-            return "".to_string();
-        }
-        let constructor = ctx
-            .constructors
-            .get(ty.as_str())
-            .cloned()
-            .unwrap_or_else(|| fallback_constructor(ty));
 
-        let nondet_picks = constructor
-            .fields
-            .iter()
-            .map(|f| {
-                let body = type_conversion(
-                    format!("nondet_picks.message_{}.clone().unwrap()", f.name),
-                    f.ty.clone(),
-                );
+            let fields = constructor
+                .fields
+                .iter()
+                .map(|f| format!("{}: message_{}", f.name, f.name))
+                .collect_vec()
+                .join(", ");
+            let msg = format!("{} {{ {} }}", constructor.name.replace('_', "::"), fields);
 
-                format!("                   let message_{} = {};", f.name, body)
-            })
-            .collect_vec();
-
-        let fields = constructor
-            .fields
-            .iter()
-            .map(|f| format!("{}: message_{}", f.name, f.name))
-            .collect_vec()
-            .join(", ");
-        let msg = format!("{} {{ {} }}", constructor.name.replace('_', "::"), fields);
-
-        translate_action(action, msg, nondet_picks.clone())
-    });
+            translate_action(action, msg, nondet_picks.clone())
+        });
 
     msgs.clone().join("\n")
 }

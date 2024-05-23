@@ -167,13 +167,13 @@ pub mod state_structs {
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
-        pub offset: BigInt
+  pub struct Config {
+        pub total_supply: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Config {
-        pub total_supply: BigInt
+  pub struct InstantiateMsg {
+        pub offset: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -341,6 +341,28 @@ pub mod tests {
             match action_taken.as_str() {
 
 
+               "burn_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_shares = nondet_picks.message_shares.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Burn { shares: message_shares };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
                "q::init" => {
                     println!("Initializing contract.");
 
@@ -382,28 +404,6 @@ pub mod tests {
 
 
                     let msg = ExecuteMsg::Mint {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
-               "burn_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_shares = nondet_picks.message_shares.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Burn { shares: message_shares };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

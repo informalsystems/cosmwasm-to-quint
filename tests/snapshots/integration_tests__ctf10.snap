@@ -155,15 +155,15 @@ pub mod state_structs {
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Whitelist {
-        pub users: Vec<String>
-    }
-
-    #[derive(Clone, Debug, Deserialize)]
   pub struct InstantiateMsg {
         pub cw721_code_id: BigInt,
         pub mint_per_user: BigInt,
         pub whitelisted_users: Vec<String>
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+  pub struct Whitelist {
+        pub users: Vec<String>
     }
 
     #[derive(Clone, Debug, Deserialize)]
