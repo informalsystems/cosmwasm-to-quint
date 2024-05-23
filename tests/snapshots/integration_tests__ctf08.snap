@@ -213,19 +213,13 @@ module oaksecurity_cosmwasm_ctf_08 {
 
 
 mbt:
-oaksecurity_cosmwasm_ctf_08.rs:
+mbt_oaksecurity_cosmwasm_ctf_08.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
-    #[derive(Clone, Debug, Deserialize)]
-  pub struct Operations {
-        pub n_trades: BigInt,
-        pub n_sales: BigInt
-    }
-
     #[derive(Clone, Debug, Deserialize)]
   pub struct Trade {
         pub asked_id: String,
@@ -239,6 +233,11 @@ pub mod state_structs {
     }
 
     #[derive(Clone, Debug, Deserialize)]
+  pub struct GetCountResponse {
+        pub count: BigInt
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
   pub struct Sale {
         pub nft_id: String,
         pub price: BigInt,
@@ -247,13 +246,14 @@ pub mod state_structs {
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
-        pub nft_address: String
+  pub struct Operations {
+        pub n_trades: BigInt,
+        pub n_sales: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct GetCountResponse {
-        pub count: BigInt
+  pub struct InstantiateMsg {
+        pub nft_address: String
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -330,10 +330,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use oaksecurity_cosmwasm_ctf_08::contract;
+    use oaksecurity_cosmwasm_ctf_08::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -419,11 +420,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -452,12 +449,81 @@ pub mod tests {
 
             match action_taken.as_str() {
 
+
                "exec_cancel_sale_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
                    let message_id = nondet_picks.message_id.clone().unwrap();
                     let msg = ExecuteMsg::CancelSale { id: message_id };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "exec_buy_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_id = nondet_picks.message_id.clone().unwrap();
+                    let msg = ExecuteMsg::BuyNFT { id: message_id };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "exec_new_trade_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_target = nondet_picks.message_target.clone().unwrap();
+                   let message_offered = nondet_picks.message_offered.clone().unwrap();
+                    let msg = ExecuteMsg::NewTrade { target: message_target, offered: message_offered };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "exec_accept_trade_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_id = nondet_picks.message_id.clone().unwrap();
+                   let message_trader = nondet_picks.message_trader.clone().unwrap();
+                    let msg = ExecuteMsg::AcceptTrade { id: message_id, trader: message_trader };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -551,74 +617,6 @@ pub mod tests {
                             );
                         }
                     }
-                }
-
-
-
-               "exec_new_trade_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_target = nondet_picks.message_target.clone().unwrap();
-                   let message_offered = nondet_picks.message_offered.clone().unwrap();
-                    let msg = ExecuteMsg::NewTrade { target: message_target, offered: message_offered };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
-               "exec_buy_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_id = nondet_picks.message_id.clone().unwrap();
-                    let msg = ExecuteMsg::BuyNFT { id: message_id };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
-               "exec_accept_trade_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_id = nondet_picks.message_id.clone().unwrap();
-                   let message_trader = nondet_picks.message_trader.clone().unwrap();
-                    let msg = ExecuteMsg::AcceptTrade { id: message_id, trader: message_trader };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
                 }
 
 

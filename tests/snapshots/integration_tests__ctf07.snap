@@ -181,7 +181,7 @@ module oaksecurity_cosmwasm_ctf_07 {
 
 
 mbt:
-oaksecurity_cosmwasm_ctf_07.rs:
+mbt_oaksecurity_cosmwasm_ctf_07.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -253,10 +253,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use oaksecurity_cosmwasm_ctf_07::contract;
+    use oaksecurity_cosmwasm_ctf_07::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -342,11 +343,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -374,27 +371,6 @@ pub mod tests {
             println!("Step number: {:?}", s.meta.index);
 
             match action_taken.as_str() {
-
-               "update_config_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_new_threshold = nondet_picks.message_new_threshold.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::UpdateConfig { new_threshold: message_new_threshold };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
 
 
                "q::init" => {
@@ -432,6 +408,28 @@ pub mod tests {
 
 
 
+               "owner_action_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_msg = nondet_picks.message_msg.clone().unwrap();
+                    let msg = ExecuteMsg::OwnerAction { msg: message_msg };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
                "deposit_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -454,12 +452,12 @@ pub mod tests {
 
 
 
-               "withdraw_action" => {
+               "update_config_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
+                   let message_new_threshold = nondet_picks.message_new_threshold.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::UpdateConfig { new_threshold: message_new_threshold };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -476,12 +474,12 @@ pub mod tests {
 
 
 
-               "owner_action_action" => {
+               "withdraw_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_msg = nondet_picks.message_msg.clone().unwrap();
-                    let msg = ExecuteMsg::OwnerAction { msg: message_msg };
+                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

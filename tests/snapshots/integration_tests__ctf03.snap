@@ -440,7 +440,7 @@ module proxy {
 
 
 mbt:
-flash_loan.rs:
+mbt_flash_loan.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -489,10 +489,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use flash_loan::contract;
+    use flash_loan::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -578,11 +579,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -611,34 +608,13 @@ pub mod tests {
 
             match action_taken.as_str() {
 
+
                "flash_loan_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
 
                     let msg = ConstructorForExecuteMsg::FlashLoan {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
-               "transfer_owner_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ConstructorForExecuteMsg::TransferOwner {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -677,6 +653,28 @@ pub mod tests {
 
 
 
+               "settle_loan_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = ConstructorForExecuteMsg::SettleLoan {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
                "q::init" => {
                     println!("Initializing contract.");
 
@@ -708,28 +706,6 @@ pub mod tests {
                             );
                         }
                     }
-                }
-
-
-
-               "settle_loan_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ConstructorForExecuteMsg::SettleLoan {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
                 }
 
 
@@ -755,6 +731,28 @@ pub mod tests {
                 }
 
 
+
+               "transfer_owner_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = ConstructorForExecuteMsg::TransferOwner {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
                 _ => panic!("Invalid action taken"),
             }
             compare_state(&test_state, &app, &(s.value.clone()));
@@ -771,7 +769,7 @@ pub mod tests {
 }
 
 
-mock_arb.rs:
+mbt_mock_arb.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -819,10 +817,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use mock_arb::contract;
+    use mock_arb::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -908,11 +907,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -940,40 +935,6 @@ pub mod tests {
             println!("Step number: {:?}", s.meta.index);
 
             match action_taken.as_str() {
-
-               "q::init" => {
-                    println!("Initializing contract.");
-
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = InstantiateMsg {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    test_state.contract_addr = app.instantiate_contract(
-                        code_id,
-                        sender,
-                        &msg,
-                        &funds,
-                        "test",
-                        None,
-                    ).unwrap();
-
-                    for (addr, coins) in s.value.bank.clone().iter() {
-                        for (denom, amount) in coins.iter() {
-                            app = mint_tokens(
-                                app,
-                                addr.clone(),
-                                denom.to_string(),
-                                Uint128::new(amount.to_u128().unwrap()),
-                            );
-                        }
-                    }
-                }
-
 
 
                "arbitrage_action" => {
@@ -997,6 +958,41 @@ pub mod tests {
                 }
 
 
+
+               "q::init" => {
+                    println!("Initializing contract.");
+
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = InstantiateMsg {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        "test",
+                        None,
+                    ).unwrap();
+
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
+                }
+
+
                 _ => panic!("Invalid action taken"),
             }
             compare_state(&test_state, &app, &(s.value.clone()));
@@ -1013,7 +1009,7 @@ pub mod tests {
 }
 
 
-proxy.rs:
+mbt_proxy.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -1061,10 +1057,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use proxy::contract;
+    use proxy::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -1150,11 +1147,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -1182,6 +1175,29 @@ pub mod tests {
             println!("Step number: {:?}", s.meta.index);
 
             match action_taken.as_str() {
+
+
+               "request_flash_loan_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = ConstructorForExecuteMsg::RequestFlashLoan {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
 
                "q::init" => {
                     println!("Initializing contract.");
@@ -1214,28 +1230,6 @@ pub mod tests {
                             );
                         }
                     }
-                }
-
-
-
-               "request_flash_loan_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ConstructorForExecuteMsg::RequestFlashLoan {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
                 }
 
 

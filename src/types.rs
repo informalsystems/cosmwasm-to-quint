@@ -28,8 +28,9 @@ pub struct Function<'f> {
 }
 
 #[derive(Clone)]
-pub struct Context<'tcx> {
+pub struct Context<'tcx, 'c> {
     // global
+    pub crate_name: &'c str,
     pub message_type_for_action: HashMap<String, String>,
     pub constructors: HashMap<String, Constructor>,
     pub structs: HashMap<String, Vec<Field>>,

@@ -26,3 +26,13 @@ rustup target add wasm32-unknown-unknown
 ``` bash
 cargo clean && cargo cosmwasm-to-quint
 ```
+
+4. In order to run the generated tests, you'll need to add some dependencies:
+```bash
+cargo add itf@0.2.4 --dev
+cargo add anyhow@1.0.83 --dev
+cargo add num-bigint@0.4.4 --dev
+cargo add num-traits@0.2.17 --dev
+```
+
+5. TODO: Add instructions on how to produce traces for the test

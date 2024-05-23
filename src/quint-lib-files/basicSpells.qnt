@@ -171,15 +171,4 @@ module basicSpells {
 
   pure def listFilter(l: List[a], f: (a) => bool): List[a] =
     l.foldl([], (acc, e) => if (f(e)) acc.append(e) else acc)
-
-  pure def listMap(l: List[a], f: (a) => b): List[b] =
-    l.foldl([], (acc, e) => acc.append(f(e)))
-
-  //// Returns a set of the elements in the list.
-  ////
-  //// - @param __list a list
-  //// - @returns a set of the elements in __list
-  pure def toSet(__list: List[a]): Set[a] = {
-      __list.foldl(Set(), (__s, __e) => __s.union(Set(__e)))
-  }
 }

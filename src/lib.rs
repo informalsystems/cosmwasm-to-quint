@@ -134,6 +134,7 @@ fn translate_all_items(tcx: TyCtxt) {
 fn translate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     let mut ctx = Context {
         tcx,
+        crate_name,
         message_type_for_action: HashMap::from([(
             "instantiate".to_string(),
             "InstantiateMsg".to_string(),
@@ -190,8 +191,8 @@ fn translate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) 
         .expect("Unable to write file");
 
     // write tests to file
-    std::fs::create_dir_all("src/mbt").expect("Unable to create directory");
-    std::fs::write(format!("src/mbt/{}.rs", crate_name), tests).expect("Unable to write file");
+    std::fs::create_dir_all("tests").expect("Unable to create directory");
+    std::fs::write(format!("tests/mbt_{}.rs", crate_name), tests).expect("Unable to write file");
 }
 
 // This is the main entry point for the plugin. It prints the generated quint code to STDOUT.

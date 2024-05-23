@@ -155,7 +155,7 @@ module oaksecurity_cosmwasm_ctf_01 {
 
 
 mbt:
-oaksecurity_cosmwasm_ctf_01.rs:
+mbt_oaksecurity_cosmwasm_ctf_01.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -220,10 +220,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use oaksecurity_cosmwasm_ctf_01::contract;
+    use oaksecurity_cosmwasm_ctf_01::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -309,11 +310,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -341,40 +338,6 @@ pub mod tests {
             println!("Step number: {:?}", s.meta.index);
 
             match action_taken.as_str() {
-
-               "q::init" => {
-                    println!("Initializing contract.");
-
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = InstantiateMsg { count: 0 };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    test_state.contract_addr = app.instantiate_contract(
-                        code_id,
-                        sender,
-                        &msg,
-                        &funds,
-                        "test",
-                        None,
-                    ).unwrap();
-
-                    for (addr, coins) in s.value.bank.clone().iter() {
-                        for (denom, amount) in coins.iter() {
-                            app = mint_tokens(
-                                app,
-                                addr.clone(),
-                                denom.to_string(),
-                                Uint128::new(amount.to_u128().unwrap()),
-                            );
-                        }
-                    }
-                }
-
 
 
                "withdraw_action" => {
@@ -417,6 +380,41 @@ pub mod tests {
                     );
 
                     compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "q::init" => {
+                    println!("Initializing contract.");
+
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = InstantiateMsg { count: 0 };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        "test",
+                        None,
+                    ).unwrap();
+
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
                 }
 
 

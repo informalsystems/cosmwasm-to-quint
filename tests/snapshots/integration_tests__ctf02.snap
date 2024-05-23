@@ -176,7 +176,7 @@ module oaksecurity_cosmwasm_ctf_02 {
 
 
 mbt:
-oaksecurity_cosmwasm_ctf_02.rs:
+mbt_oaksecurity_cosmwasm_ctf_02.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -245,10 +245,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use oaksecurity_cosmwasm_ctf_02::contract;
+    use oaksecurity_cosmwasm_ctf_02::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -334,11 +335,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -367,12 +364,35 @@ pub mod tests {
 
             match action_taken.as_str() {
 
-               "withdraw_action" => {
+
+               "unstake_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
+                   let message_unlock_amount = nondet_picks.message_unlock_amount.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Unstake { unlock_amount: message_unlock_amount };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "deposit_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = ExecuteMsg::Deposit {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -424,56 +444,34 @@ pub mod tests {
 
 
 
-               "unstake_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_unlock_amount = nondet_picks.message_unlock_amount.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Unstake { unlock_amount: message_unlock_amount };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
-               "deposit_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ExecuteMsg::Deposit {  };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
                "stake_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
                    let message_lock_amount = nondet_picks.message_lock_amount.clone().unwrap().to_u64().unwrap().into();
                     let msg = ExecuteMsg::Stake { lock_amount: message_lock_amount };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "withdraw_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

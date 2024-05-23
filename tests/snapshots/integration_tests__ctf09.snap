@@ -179,20 +179,13 @@ module oaksecurity_cosmwasm_ctf_09 {
 
 
 mbt:
-oaksecurity_cosmwasm_ctf_09.rs:
+mbt_oaksecurity_cosmwasm_ctf_09.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
-    #[derive(Clone, Debug, Deserialize)]
-  pub struct State {
-        pub owner: String,
-        pub total_staked: BigInt,
-        pub global_index: BigInt
-    }
-
     #[derive(Clone, Debug, Deserialize)]
   pub struct InstantiateMsg {
 
@@ -203,6 +196,13 @@ pub mod state_structs {
         pub staked_amount: BigInt,
         pub user_index: BigInt,
         pub pending_rewards: BigInt
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+  pub struct State {
+        pub owner: String,
+        pub total_staked: BigInt,
+        pub global_index: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -250,10 +250,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use oaksecurity_cosmwasm_ctf_09::contract;
+    use oaksecurity_cosmwasm_ctf_09::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -339,11 +340,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -372,12 +369,35 @@ pub mod tests {
 
             match action_taken.as_str() {
 
+
                "increase_reward_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
 
                     let msg = ExecuteMsg::IncreaseReward {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "deposit_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+
+                    let msg = ExecuteMsg::Deposit {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -457,28 +477,6 @@ pub mod tests {
 
                    let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
                     let msg = ExecuteMsg::Withdraw { amount: message_amount };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
-
-               "deposit_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-
-                    let msg = ExecuteMsg::Deposit {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);

@@ -202,7 +202,7 @@ module oaksecurity_cosmwasm_ctf_05 {
 
 
 mbt:
-oaksecurity_cosmwasm_ctf_05.rs:
+mbt_oaksecurity_cosmwasm_ctf_05.rs:
 
 pub mod state_structs {
     use num_bigint::BigInt;
@@ -274,10 +274,11 @@ pub mod state_structs {
 }
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+    use oaksecurity_cosmwasm_ctf_05::contract;
+    use oaksecurity_cosmwasm_ctf_05::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -363,11 +364,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
@@ -396,27 +393,6 @@ pub mod tests {
 
             match action_taken.as_str() {
 
-               "withdraw_action" => {
-                    let sender = Addr::unchecked(sender.unwrap());
-                    let funds = funds_from_trace(amount, denom);
-
-                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
-                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
-                    println!("Message: {:?}", msg);
-                    println!("Sender: {:?}", sender);
-                    println!("Funds: {:?}", funds);
-
-                    let res = app.execute_contract(
-                        sender,
-                        test_state.contract_addr.clone(),
-                        &msg,
-                        &funds,
-                    );
-
-                    compare_result(s.value.result.clone(), res)
-                }
-
-
 
                "drop_owner_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
@@ -440,34 +416,47 @@ pub mod tests {
 
 
 
-               "owner_action_action" => {
+               "q::init" => {
+                    println!("Initializing contract.");
+
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_msg = nondet_picks.message_msg.clone().unwrap();
-                    let msg = ExecuteMsg::OwnerAction { msg: message_msg };
+
+                    let msg = InstantiateMsg { owner: "" };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
 
-                    let res = app.execute_contract(
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
                         sender,
-                        test_state.contract_addr.clone(),
                         &msg,
                         &funds,
-                    );
+                        "test",
+                        None,
+                    ).unwrap();
 
-                    compare_result(s.value.result.clone(), res)
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
                 }
 
 
 
-               "accept_owner_action" => {
+               "withdraw_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
-                    let msg = ExecuteMsg::AcceptOwnership {  };
+                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
+                    let msg = ExecuteMsg::Withdraw { amount: message_amount };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
@@ -528,37 +517,46 @@ pub mod tests {
 
 
 
-               "q::init" => {
-                    println!("Initializing contract.");
-
+               "accept_owner_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
 
-                    let msg = InstantiateMsg { owner: "" };
+                    let msg = ExecuteMsg::AcceptOwnership {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
 
-                    test_state.contract_addr = app.instantiate_contract(
-                        code_id,
+                    let res = app.execute_contract(
                         sender,
+                        test_state.contract_addr.clone(),
                         &msg,
                         &funds,
-                        "test",
-                        None,
-                    ).unwrap();
+                    );
 
-                    for (addr, coins) in s.value.bank.clone().iter() {
-                        for (denom, amount) in coins.iter() {
-                            app = mint_tokens(
-                                app,
-                                addr.clone(),
-                                denom.to_string(),
-                                Uint128::new(amount.to_u128().unwrap()),
-                            );
-                        }
-                    }
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+
+               "owner_action_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                   let message_msg = nondet_picks.message_msg.clone().unwrap();
+                    let msg = ExecuteMsg::OwnerAction { msg: message_msg };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
                 }
 
 

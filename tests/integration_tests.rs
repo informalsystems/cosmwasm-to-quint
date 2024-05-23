@@ -64,7 +64,7 @@ fn run(dir: &str, f: impl FnOnce(&mut Command)) -> Result<String> {
         .collect::<Vec<String>>()
         .join("\n\n");
 
-    let mut mbt_entries = fs::read_dir(ws.join("src/mbt"))?
+    let mut mbt_entries = fs::read_dir(ws.join("tests"))?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
     mbt_entries.sort();

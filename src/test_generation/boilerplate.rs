@@ -1,10 +1,18 @@
-pub const TEST_HEADER: &str = "
+pub fn test_header(crate_name: &str) -> String {
+    format!(
+        "
 #[cfg(test)]
-pub mod tests {
-    use crate::{
-        mbt::state_structs::*,
-        msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    };
+pub mod tests {{
+    use {crate_name}::contract;
+    use {crate_name}::msg::{{ExecuteMsg, InstantiateMsg, QueryMsg}};
+
+{TEST_AUX}
+"
+    )
+}
+
+const TEST_AUX: &str = "
+    use crate::state_structs::*;
     use cosmwasm_std::{coin, Addr, Uint128};
     use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
     use itf::trace_from_str;
@@ -90,11 +98,7 @@ pub mod tests {
     #[test]
     fn model_test() {
         let mut app = App::default();
-        let code = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        );
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
         let code_id = app.store_code(Box::new(code));
 
         // create test state
