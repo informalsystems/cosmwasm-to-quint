@@ -186,48 +186,48 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
-
+    pub struct InstantiateMsg {
+        
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct State {
+    pub struct State {
         pub owner: String,
         pub total_staked: BigInt,
         pub global_index: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct UserRewardInfo {
+    pub struct UserRewardInfo {
         pub staked_amount: BigInt,
         pub user_index: BigInt,
         pub pending_rewards: BigInt
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub state: State,
         pub users: HashMap<String, UserRewardInfo>
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_amount: Option<BigInt>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -248,6 +248,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_09::contract;
@@ -374,7 +375,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ExecuteMsg::ClaimRewards {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -395,7 +395,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ExecuteMsg::Deposit {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -415,7 +414,6 @@ pub mod tests {
                "increase_reward_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = ExecuteMsg::IncreaseReward {  };
                     println!("Message: {:?}", msg);
@@ -467,12 +465,11 @@ pub mod tests {
                }
 
 
-
                "withdraw_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
+                    let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
                     let msg = ExecuteMsg::Withdraw { amount: message_amount };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);

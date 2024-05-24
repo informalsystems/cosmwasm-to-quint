@@ -3,7 +3,10 @@ use crate::test_generation::boilerplate::*;
 use crate::types::{fallback_constructor, Context};
 use itertools::Itertools;
 
-pub fn translate_actions(ctx: Context) -> String {
+/// Generates one match arm per action on the model:
+///   "foo_action" => // run foo and compare result
+///   "bar_action" => // run bar and compare result
+pub fn arms_for_actions(ctx: Context) -> String {
     ctx.message_type_for_action
         .iter()
         // Sort items by name so that the generated code is deterministic
@@ -11,21 +14,21 @@ pub fn translate_actions(ctx: Context) -> String {
         .map(|(action, ty)| {
             if action == "instantiate" {
                 let msg = generate_instantiate_msg(ctx.clone());
-                return translate_init(msg);
+                return arm_for_init(msg);
             }
 
             let msg = generate_message(ctx.clone(), ty.clone());
-            translate_action(action, msg)
+            arm_for_action(action, msg)
         })
         .join("\n")
 }
 
-fn translate_action(action_name: &str, msg: String) -> String {
+fn arm_for_action(action_name: &str, msg: String) -> String {
     format!(
         "
                \"{action_name}_action\" => {{
                     {EXTRACT_SENDER_AND_FUNDS}
-{msg}
+                    {msg}
                     {PRINT_MESSAGE_FIELDS}
                     {EXECUTE_CONTRACT}
                     {COMPARE_RESULT}
@@ -34,7 +37,7 @@ fn translate_action(action_name: &str, msg: String) -> String {
     )
 }
 
-fn translate_init(msg: String) -> String {
+fn arm_for_init(msg: String) -> String {
     format!(
         "
                \"q::init\" => {{
@@ -46,7 +49,6 @@ fn translate_init(msg: String) -> String {
                     {INITIALIZE_CONTRACT}
                     {MINT_TOKENS}
                }}
-
 "
     )
 }
@@ -86,10 +88,9 @@ fn generate_message(ctx: Context, ty: String) -> String {
                 f.ty.clone(),
             );
 
-            format!("                   let message_{} = {};", f.name, body)
+            format!("let message_{} = {};", f.name, body)
         })
-        .collect_vec()
-        .join("\n");
+        .collect_vec();
 
     let fields = constructor
         .fields
@@ -100,14 +101,17 @@ fn generate_message(ctx: Context, ty: String) -> String {
 
     let message_type = constructor.name.replace('_', "::");
 
-    format!(
-        "{nondet_picks}
-                    let msg = {message_type} {{ {fields} }};"
-    )
+    let msg_def = format!("let msg = {message_type} {{ {fields} }};");
+
+    [nondet_picks, vec![msg_def]]
+        .concat()
+        .join("\n                    ")
 }
 
 fn type_conversion(value: String, ty: String) -> String {
     if ty.starts_with("List") {
+        // FIXME: we should have an intermediate representation for types so we
+        // don't have to convert to and from strings like this.
         return format!(
             "{}.iter().map(|x| {}).collect()",
             value,
@@ -119,6 +123,8 @@ fn type_conversion(value: String, ty: String) -> String {
             )
         );
     }
+
+    // TODO: convert other types
 
     match ty.as_str() {
         "str" => value,

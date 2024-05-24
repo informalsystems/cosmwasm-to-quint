@@ -209,49 +209,49 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
+    pub struct InstantiateMsg {
         pub owner: String
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct State {
+    pub struct State {
         pub current_owner: String,
         pub proposed_owner: Option[Addr]
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub state: State,
         pub balances: HashMap<String, BigInt>
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub proposed_owner_element: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_amount: Option<BigInt>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_msg: Option<CosmosMsg>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_new_owner: Option<String>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -272,6 +272,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_05::contract;
@@ -398,7 +399,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ExecuteMsg::AcceptOwnership {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -419,7 +419,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ExecuteMsg::Deposit {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -439,7 +438,6 @@ pub mod tests {
                "drop_owner_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = ExecuteMsg::DropOwnershipProposal {  };
                     println!("Message: {:?}", msg);
@@ -491,12 +489,11 @@ pub mod tests {
                }
 
 
-
                "owner_action_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_msg = nondet_picks.message_msg.clone().unwrap();
+                    let message_msg = nondet_picks.message_msg.clone().unwrap();
                     let msg = ExecuteMsg::OwnerAction { msg: message_msg };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -517,7 +514,7 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_new_owner = nondet_picks.message_new_owner.clone().unwrap();
+                    let message_new_owner = nondet_picks.message_new_owner.clone().unwrap();
                     let msg = ExecuteMsg::ProposeNewOwner { new_owner: message_new_owner };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -538,7 +535,7 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
+                    let message_amount = nondet_picks.message_amount.clone().unwrap().to_u64().unwrap().into();
                     let msg = ExecuteMsg::Withdraw { amount: message_amount };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);

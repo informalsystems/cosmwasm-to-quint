@@ -187,49 +187,49 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Config {
+    pub struct Config {
         pub voting_window: BigInt,
         pub voting_token: String,
         pub owner: String
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
+    pub struct InstantiateMsg {
         pub token: String,
         pub owner: String,
         pub window: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Proposal {
+    pub struct Proposal {
         pub proposer: String,
         pub timestamp: BigInt
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub config: Config,
         pub proposal: Proposal
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_action: Option<CosmosMsg>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -250,6 +250,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_06::contract;
@@ -406,12 +407,11 @@ pub mod tests {
                }
 
 
-
                "owner_action_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_action = nondet_picks.message_action.clone().unwrap();
+                    let message_action = nondet_picks.message_action.clone().unwrap();
                     let msg = ExecuteMsg::OwnerAction { action: message_action };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -431,7 +431,6 @@ pub mod tests {
                "propose_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = ExecuteMsg::Propose {  };
                     println!("Message: {:?}", msg);
@@ -453,7 +452,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ExecuteMsg::Receive {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -473,7 +471,6 @@ pub mod tests {
                "resolve_proposal_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = ExecuteMsg::ResolveProposal {  };
                     println!("Message: {:?}", msg);

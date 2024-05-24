@@ -220,29 +220,30 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Config {
+    pub struct Config {
         pub nft_contract: String
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct GetCountResponse {
+    pub struct GetCountResponse {
         pub count: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
+    pub struct InstantiateMsg {
         pub nft_address: String
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Operations {
+    pub struct Operations {
         pub n_trades: BigInt,
         pub n_sales: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Sale {
+    pub struct Sale {
         pub nft_id: String,
         pub price: BigInt,
         pub owner: String,
@@ -250,64 +251,63 @@ pub mod state_structs {
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Trade {
+    pub struct Trade {
         pub asked_id: String,
         pub to_trade_id: String,
         pub trader: String
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub config: Config,
         pub sales: HashMap<String, Sale>,
         pub trades: HashMap<String, Trade>,
         pub operations: Operations
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_id: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_price: Option<BigInt>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_tradable: Option<bool>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_id: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_id: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_target: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_offered: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_id: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_trader: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_id: Option<String>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -328,6 +328,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_08::contract;
@@ -454,8 +455,8 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_id = nondet_picks.message_id.clone().unwrap();
-                   let message_trader = nondet_picks.message_trader.clone().unwrap();
+                    let message_id = nondet_picks.message_id.clone().unwrap();
+                    let message_trader = nondet_picks.message_trader.clone().unwrap();
                     let msg = ExecuteMsg::AcceptTrade { id: message_id, trader: message_trader };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -476,7 +477,7 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_id = nondet_picks.message_id.clone().unwrap();
+                    let message_id = nondet_picks.message_id.clone().unwrap();
                     let msg = ExecuteMsg::BuyNFT { id: message_id };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -497,7 +498,7 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_id = nondet_picks.message_id.clone().unwrap();
+                    let message_id = nondet_picks.message_id.clone().unwrap();
                     let msg = ExecuteMsg::CancelSale { id: message_id };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -518,7 +519,7 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_id = nondet_picks.message_id.clone().unwrap();
+                    let message_id = nondet_picks.message_id.clone().unwrap();
                     let msg = ExecuteMsg::CancelTrade { id: message_id };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -539,9 +540,9 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_id = nondet_picks.message_id.clone().unwrap();
-                   let message_price = nondet_picks.message_price.clone().unwrap().to_u64().unwrap().into();
-                   let message_tradable = nondet_picks.message_tradable.clone().unwrap();
+                    let message_id = nondet_picks.message_id.clone().unwrap();
+                    let message_price = nondet_picks.message_price.clone().unwrap().to_u64().unwrap().into();
+                    let message_tradable = nondet_picks.message_tradable.clone().unwrap();
                     let msg = ExecuteMsg::NewSale { id: message_id, price: message_price, tradable: message_tradable };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -562,8 +563,8 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_target = nondet_picks.message_target.clone().unwrap();
-                   let message_offered = nondet_picks.message_offered.clone().unwrap();
+                    let message_target = nondet_picks.message_target.clone().unwrap();
+                    let message_offered = nondet_picks.message_offered.clone().unwrap();
                     let msg = ExecuteMsg::NewTrade { target: message_target, offered: message_offered };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -612,7 +613,6 @@ pub mod tests {
                     }
 
                }
-
 
                 _ => panic!("Invalid action taken"),
             }

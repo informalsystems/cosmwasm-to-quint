@@ -447,26 +447,27 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub config: Config,
         pub flash_loan: FlashLoanState
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -487,6 +488,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use flash_loan::contract;
@@ -613,7 +615,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ConstructorForExecuteMsg::FlashLoan {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -664,11 +665,9 @@ pub mod tests {
                }
 
 
-
                "set_proxy_addr_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = ConstructorForExecuteMsg::SetProxyAddr {  };
                     println!("Message: {:?}", msg);
@@ -690,7 +689,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ConstructorForExecuteMsg::SettleLoan {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -711,7 +709,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ConstructorForExecuteMsg::TransferOwner {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -731,7 +728,6 @@ pub mod tests {
                "withdraw_funds_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = ConstructorForExecuteMsg::WithdrawFunds {  };
                     println!("Message: {:?}", msg);
@@ -771,25 +767,26 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub config: Config
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -810,6 +807,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use mock_arb::contract;
@@ -936,7 +934,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ConstructorForExecuteMsg::Arbitrage {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -986,7 +983,6 @@ pub mod tests {
 
                }
 
-
                 _ => panic!("Invalid action taken"),
             }
             compare_state(&test_state, &app, &(s.value.clone()));
@@ -1010,25 +1006,26 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub config: Config
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -1049,6 +1046,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use proxy::contract;
@@ -1205,11 +1203,9 @@ pub mod tests {
                }
 
 
-
                "request_flash_loan_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = ConstructorForExecuteMsg::RequestFlashLoan {  };
                     println!("Message: {:?}", msg);

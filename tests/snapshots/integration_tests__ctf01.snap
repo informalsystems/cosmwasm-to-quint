@@ -162,42 +162,42 @@ pub mod state_structs {
     use serde::Deserialize;
     use std::collections::HashMap;
     use itf::de::{self, As};
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct InstantiateMsg {
+    pub struct InstantiateMsg {
         pub count: BigInt
     }
 
     #[derive(Clone, Debug, Deserialize)]
-  pub struct Lockup {
+    pub struct Lockup {
         pub id: BigInt,
         pub owner: String,
         pub amount: BigInt,
         pub release_timestamp: BigInt
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct ContractState {
+    pub struct ContractState {
         pub last_id: BigInt,
         pub lockups: HashMap<BigInt, Lockup>
     }
-
+    
     #[derive(Clone, Debug, Deserialize)]
-  pub struct NondetPicks {
-
+    pub struct NondetPicks {
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub sender: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub denom: Option<String>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub amount: Option<BigInt>,
-
+        
         #[serde(with = "As::<de::Option::<_>>")]
         pub message_ids: Option<Vec<BigInt>>
     }
-
-
+    
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
 
@@ -218,6 +218,7 @@ pub mod state_structs {
     }
 
 }
+    
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_01::contract;
@@ -344,7 +345,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = ExecuteMsg::Deposit {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -395,12 +395,11 @@ pub mod tests {
                }
 
 
-
                "withdraw_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                   let message_ids = nondet_picks.message_ids.clone().unwrap().iter().map(|x| x.to_u64().unwrap().into()).collect();
+                    let message_ids = nondet_picks.message_ids.clone().unwrap().iter().map(|x| x.to_u64().unwrap().into()).collect();
                     let msg = ExecuteMsg::Withdraw { ids: message_ids };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);

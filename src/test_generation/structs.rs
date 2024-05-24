@@ -1,48 +1,45 @@
+use crate::test_generation::boilerplate::*;
 use crate::types::Context;
 use itertools::Itertools;
 
+/// Defines a module with all necesary structs for the contract state and messages.
 pub fn translate_structs(ctx: Context) -> String {
-    let mut structs = "
-pub mod state_structs {
-    use num_bigint::BigInt;
-    use serde::Deserialize;
-    use std::collections::HashMap;
-    use itf::de::{self, As};
-"
-    .to_string();
-    ctx.structs
+    let contract_structs = ctx
+        .structs
         .iter()
         // Sort items by name so that the generated code is deterministic
         .sorted_by(|a, b| a.0.cmp(b.0))
-        .for_each(|(name, fields)| {
-            structs.push_str(
-                format_struct(
-                    name.to_string(),
-                    fields
-                        .iter()
-                        .map(|f| (f.name.clone(), f.ty.clone()))
-                        .collect_vec(),
-                    false,
-                )
-                .as_str(),
-            );
-        });
-    structs.push_str(
-        format_struct(
-            "ContractState".to_string(),
-            ctx.contract_state.clone(),
-            false,
-        )
-        .as_str(),
+        .map(|(name, fields)| {
+            let field_tuples = fields
+                .iter()
+                .map(|f| (f.name.clone(), f.ty.clone()))
+                .collect_vec();
+
+            format_struct(name.to_string(), field_tuples, false)
+        })
+        .collect_vec()
+        .join("\n");
+
+    let contract_state_struct = format_struct(
+        "ContractState".to_string(),
+        ctx.contract_state.clone(),
+        false,
     );
 
-    structs.push_str(
-        format_struct("NondetPicks".to_string(), ctx.nondet_picks.clone(), true).as_str(),
-    );
+    let nondet_picks_struct =
+        format_struct("NondetPicks".to_string(), ctx.nondet_picks.clone(), true);
 
-    structs.push_str(BOILERPLATE_STRUCTS);
-
-    format!("{}\n}}", structs)
+    format!(
+        "
+pub mod state_structs {{
+    {STRUCTS_MODULE_IMPORTS}
+    {contract_structs}
+    {contract_state_struct}
+    {nondet_picks_struct}
+    {DEFAULT_STRUCTS}
+}}
+    "
+    )
 }
 
 fn format_struct(name: String, fields: Vec<(String, String)>, optional: bool) -> String {
@@ -54,21 +51,26 @@ fn format_struct(name: String, fields: Vec<(String, String)>, optional: bool) ->
                 format!(
                     "
         #[serde(with = \"As::<de::Option::<_>>\")]
-        pub {}: Option<{}>",
-                    name, typ
+        pub {name}: Option<{typ}>"
                 )
             } else {
-                format!("        pub {}: {}", name, typ)
+                format!("pub {name}: {typ}")
             }
         })
-        .join(",\n");
+        .join(",\n        ");
+
     format!(
-        "    #[derive(Clone, Debug, Deserialize)]\n  pub struct {} {{\n{}\n    }}\n\n",
-        name, fields
+        "
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct {name} {{
+        {fields}
+    }}"
     )
 }
 
 fn translate_type(ty: String) -> String {
+    // FIXME: we should have an intermediate representation for types so we
+    // don't have to convert to and from strings like this.
     if ty.contains("->") {
         let it = ty.split("->").collect_vec();
         let key = it[0];
@@ -98,24 +100,3 @@ fn translate_type(ty: String) -> String {
         _ => ty,
     }
 }
-
-const BOILERPLATE_STRUCTS: &str = "
-    #[derive(Clone, Debug, Deserialize)]
-    pub struct Message {}
-
-    #[derive(Clone, Debug, Deserialize)]
-    pub struct Response {
-        pub messages: Vec<Message>,
-    }
-
-    #[derive(Clone, Debug, Deserialize)]
-    pub struct State {
-        pub contract_state: ContractState,
-        pub bank: HashMap<String, HashMap<String, BigInt>>,
-        #[serde(with = \"As::<de::Result::<_, _>>\")]
-        pub result: Result<Response, String>,
-        pub action_taken: String,
-        pub nondet_picks: NondetPicks,
-        pub time: BigInt,
-    }
-";

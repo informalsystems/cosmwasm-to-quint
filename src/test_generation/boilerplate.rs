@@ -185,3 +185,29 @@ pub const MINT_TOKENS: &str = "for (addr, coins) in s.value.bank.clone().iter() 
                         }
                     }
 ";
+
+pub const STRUCTS_MODULE_IMPORTS: &str = "use num_bigint::BigInt;
+    use serde::Deserialize;
+    use std::collections::HashMap;
+    use itf::de::{self, As};";
+
+pub const DEFAULT_STRUCTS: &str = "
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Message {}
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Response {
+        pub messages: Vec<Message>,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct State {
+        pub contract_state: ContractState,
+        pub bank: HashMap<String, HashMap<String, BigInt>>,
+        #[serde(with = \"As::<de::Result::<_, _>>\")]
+        pub result: Result<Response, String>,
+        pub action_taken: String,
+        pub nondet_picks: NondetPicks,
+        pub time: BigInt,
+    }
+";

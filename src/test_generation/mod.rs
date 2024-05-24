@@ -9,7 +9,7 @@ pub fn generate_tests(ctx: Context) -> String {
         "{}{}{}{}",
         structs::translate_structs(ctx.clone()),
         boilerplate::test_header(ctx.crate_name),
-        actions::translate_actions(ctx),
+        actions::arms_for_actions(ctx),
         boilerplate::TEST_FOOTER
     )
 }
