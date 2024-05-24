@@ -472,7 +472,6 @@ pub mod tests {
                 }
 
 
-
                "exec_buy_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -492,7 +491,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
 
                "exec_cancel_sale_action" => {
@@ -516,7 +514,6 @@ pub mod tests {
                 }
 
 
-
                "exec_cancel_trade_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -536,7 +533,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
 
                "exec_new_sale_action" => {
@@ -562,7 +558,6 @@ pub mod tests {
                 }
 
 
-
                "exec_new_trade_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -585,13 +580,11 @@ pub mod tests {
                 }
 
 
-
                "q::init" => {
                     println!("Initializing contract.");
 
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = InstantiateMsg { nft_address: "" };
                     println!("Message: {:?}", msg);
@@ -617,7 +610,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
                 _ => panic!("Invalid action taken"),

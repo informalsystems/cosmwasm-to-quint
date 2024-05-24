@@ -144,3 +144,44 @@ pub const TEST_FOOTER: &str = "
     }
 }
 ";
+
+pub const PRINT_MESSAGE_FIELDS: &str = "println!(\"Message: {:?}\", msg);
+                    println!(\"Sender: {:?}\", sender);
+                    println!(\"Funds: {:?}\", funds);
+";
+
+pub const EXECUTE_CONTRACT: &str = "let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+";
+
+pub const COMPARE_RESULT: &str = "compare_result(s.value.result.clone(), res)";
+
+pub const EXTRACT_SENDER_AND_FUNDS: &str = "let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+";
+
+pub const INITIALIZE_CONTRACT: &str = "test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        \"test\",
+                        None,
+                    ).unwrap();
+";
+
+pub const MINT_TOKENS: &str = "for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
+";

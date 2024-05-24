@@ -334,7 +334,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = InstantiateMsg { cw721_code_id: 0, mint_per_user: 0, whitelisted_users: [] };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -359,7 +358,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
 
@@ -382,7 +382,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
                 _ => panic!("Invalid action taken"),
             }

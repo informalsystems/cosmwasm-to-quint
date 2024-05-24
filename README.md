@@ -29,6 +29,7 @@ cargo clean && cargo cosmwasm-to-quint
 
 4. In order to run the generated tests, you'll need to add some dependencies:
 ```bash
+cargo add cw-multi-test@0.16.2 --dev
 cargo add itf@0.2.4 --dev
 cargo add anyhow@1.0.83 --dev
 cargo add num-bigint@0.4.4 --dev

@@ -362,13 +362,11 @@ pub mod tests {
                 }
 
 
-
                "q::init" => {
                     println!("Initializing contract.");
 
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = InstantiateMsg { offset: 0 };
                     println!("Message: {:?}", msg);
@@ -394,7 +392,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
 
@@ -417,7 +416,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
                 _ => panic!("Invalid action taken"),
             }

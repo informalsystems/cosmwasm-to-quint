@@ -378,7 +378,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = InstantiateMsg { token: "", owner: "", window: 0 };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -403,7 +402,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
 
@@ -428,7 +428,6 @@ pub mod tests {
                 }
 
 
-
                "propose_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -448,7 +447,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
 
                "receive_cw20_action" => {
@@ -472,7 +470,6 @@ pub mod tests {
                 }
 
 
-
                "resolve_proposal_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -492,7 +489,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
                 _ => panic!("Invalid action taken"),
             }

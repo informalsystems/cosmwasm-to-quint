@@ -386,13 +386,11 @@ pub mod tests {
                 }
 
 
-
                "q::init" => {
                     println!("Initializing contract.");
 
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = InstantiateMsg {  };
                     println!("Message: {:?}", msg);
@@ -418,7 +416,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
 
@@ -443,7 +442,6 @@ pub mod tests {
                 }
 
 
-
                "unstake_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -465,7 +463,6 @@ pub mod tests {
                 }
 
 
-
                "withdraw_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -485,7 +482,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
                 _ => panic!("Invalid action taken"),
             }

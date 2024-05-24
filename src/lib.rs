@@ -191,15 +191,17 @@ fn translate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) 
         .expect("Unable to write file");
 
     // write tests to file
-    std::fs::create_dir_all("tests").expect("Unable to create directory");
     std::fs::write(format!("tests/mbt_{}.rs", crate_name), tests).expect("Unable to write file");
 }
 
 // This is the main entry point for the plugin. It prints the generated quint code to STDOUT.
 fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
-    // create generated directory
+    // create directories for the output files (if they don't already exist)
     std::fs::create_dir_all("quint/lib").expect("Unable to create directory");
+    std::fs::create_dir_all("tests").expect("Unable to create directory");
 
+    // Read quint lib files. `include_str!` makes it so they are read at
+    // compilation time, and therefore get embeded in the cosmwasm-to-quint executable
     let bank = include_str!("./quint-lib-files/bank.qnt");
     let basic_spells = include_str!("./quint-lib-files/basicSpells.qnt");
     let bounded_uint = include_str!("./quint-lib-files/BoundedUInt.qnt");
@@ -207,6 +209,7 @@ fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     let cw_utils = include_str!("./quint-lib-files/cw_utils.qnt");
     let messaging = include_str!("./quint-lib-files/messaging.qnt");
 
+    // Write the lib files in runtime
     std::fs::write("quint/lib/bank.qnt", bank).expect("Unable to write file");
     std::fs::write("quint/lib/basicSpells.qnt", basic_spells).expect("Unable to write file");
     std::fs::write("quint/lib/BoundedUInt.qnt", bounded_uint).expect("Unable to write file");

@@ -630,13 +630,11 @@ pub mod tests {
                 }
 
 
-
                "q::init" => {
                     println!("Initializing contract.");
 
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = InstantiateMsg {  };
                     println!("Message: {:?}", msg);
@@ -662,7 +660,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
 
@@ -687,7 +686,6 @@ pub mod tests {
                 }
 
 
-
                "settle_loan_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -707,7 +705,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
 
                "transfer_owner_action" => {
@@ -731,7 +728,6 @@ pub mod tests {
                 }
 
 
-
                "withdraw_funds_action" => {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
@@ -751,7 +747,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
                 _ => panic!("Invalid action taken"),
             }
@@ -958,13 +953,11 @@ pub mod tests {
                 }
 
 
-
                "q::init" => {
                     println!("Initializing contract.");
 
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
-
 
                     let msg = InstantiateMsg {  };
                     println!("Message: {:?}", msg);
@@ -990,7 +983,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
                 _ => panic!("Invalid action taken"),
@@ -1183,7 +1177,6 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-
                     let msg = InstantiateMsg {  };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
@@ -1208,7 +1201,8 @@ pub mod tests {
                             );
                         }
                     }
-                }
+
+               }
 
 
 
@@ -1231,7 +1225,6 @@ pub mod tests {
 
                     compare_result(s.value.result.clone(), res)
                 }
-
 
                 _ => panic!("Invalid action taken"),
             }
