@@ -13,14 +13,14 @@
    attempting to reproduce traces.
 
 Quint provides powerful and friendly simulation and verification tools, but
-first you need a mode. This project **speeds up** the process of getting a model
+first you need a model. This project **speeds up** the process of getting a model
 for CosmWasm contracts. And, as a bonus, you can get as many integration tests
 as you want, including tests to specific scenarios you deem important, through
 **generated Model-Based tests**.
 
 This can be used to find bugs using the Quint tools and then getting them
 reproduced in the real implementation with a generated test. For a better
-understanding of how this whole process works, take at look at our [AwesomWasm
+understanding of how this whole process works, take a look at our [AwesomWasm
 2024 Workshop
 material](https://github.com/informalsystems/quint_awesomwasm24_workshop).
 
