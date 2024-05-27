@@ -218,4 +218,6 @@ fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
     std::fs::write("quint/lib/messaging.qnt", messaging).expect("Unable to write file");
 
     translate_all_items(tcx);
+
+    println!("Sucessfully generated files. Quint files are inside quint/ and test files are inside tests/.")
 }
