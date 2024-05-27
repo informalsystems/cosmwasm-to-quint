@@ -142,6 +142,12 @@ Alice spends all of her ATOMs. You can write an invariant like
 `balances.get("Alice").get("ATOM") > 0` and then use it to obtain a trace
 violating that invariant.
 
+3. Run the tests:
+
+``` bash
+cargo test
+```
+
 ## Known limitations
 - **Imports from different crates**: this is something we want to support, but
   it is not trivial. Right now, if your contract crate imports core data
@@ -157,8 +163,16 @@ violating that invariant.
 
 ## Troubleshooting
 1. I see an "unknown feature `proc_macro_span_shrink`" error
-- You probably forgot to run `cargo update` after switching the tool chain
+
+You probably forgot to run `cargo update` after switching the tool chain
 
 2. Running `cargo cosmwasm-to-quint` exits immediately and doesn't
    produce/update any files
-- You probably forgot to run `cargo clean` before running the command
+
+You probably forgot to run `cargo clean` before running the command
+
+3. I'm getting duplicated definitions for a bunch of things
+
+Make sure you have **not** added a generated test file to your contract's crate
+somehow. If you do that, this tool will read the test file as it was part of
+your contract and, therefore, generate duplicated items.
