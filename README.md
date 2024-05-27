@@ -1,32 +1,34 @@
 # CosmWasm to Quint
 
-Semi-automated modelling and Model-Based Testing for CosmWasm contracts.
+*Semi-automated modelling and Model-Based Testing for CosmWasm contracts.*
 1. Generate [Quint](https://github.com/informalsystems/quint) model stubs for a
    contract, and only worry about specifying the important bits - the
    entrypoints.
 2. Generate tests to check that the model corresponds to the implementation by
    attempting to reproduce traces.
 
-Quint provides powerful and friendly simulation and verification tools, but you
-need a model first. This project speeds up the process of getting a model for
-CosmWasm contracts. And, as a bonus, you can get as many integration tests as
-you want, including tests to specific scenarios you deem important, through
-generated Model-Based tests.
+Quint provides powerful and friendly simulation and verification tools, but
+first you need a mode. This project **speeds up** the process of getting a model
+for CosmWasm contracts. And, as a bonus, you can get as many integration tests
+as you want, including tests to specific scenarios you deem important, through
+**generated Model-Based tests**.
 
 This can be used to find bugs using the Quint tools and then getting them
 reproduced in the real implementation with a generated test. For a better
 understanding of how this whole process works, take at look at our [AwesomWasm
 2024 Workshop
-material](https://github.com/informalsystems/quint_awesomwasm24_workshop/tree/main)
+material](https://github.com/informalsystems/quint_awesomwasm24_workshop).
 
 ## Is this ready for me to use?
 
-Yes! Although this tool is a prototype, it will make the best attempt to
+Yes!
+
+Even though this tool is a prototype, it will make the best attempt to
 generate as much as it can. It adds placeholders like `<missing-type>` to parts
 it can't translate, which you then have to replace manually. But it is
 definitely better than writing everything from scratch!
 
-See section [Known Limitations](#known-limitations) at the end for problems to expect.
+See section [Known Limitations](#known-limitations) for problems to expect.
 
 ## Setup and generation
 
