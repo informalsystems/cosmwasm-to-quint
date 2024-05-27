@@ -28,14 +28,16 @@ pub struct Function<'f> {
 }
 
 #[derive(Clone)]
-pub struct Context<'tcx> {
+pub struct Context<'tcx, 'c> {
     // global
+    pub crate_name: &'c str,
     pub message_type_for_action: HashMap<String, String>,
     pub constructors: HashMap<String, Constructor>,
     pub structs: HashMap<String, Vec<Field>>,
     pub ops_with_mutability: Vec<String>,
     pub tcx: TyCtxt<'tcx>,
     pub contract_state: Vec<(String, String)>,
+    pub nondet_picks: Vec<(String, String)>,
     // scoped
     // FIXME: This should be a stack to account for nested scopes.
     // No need to worry about nested scopes for stub generation.

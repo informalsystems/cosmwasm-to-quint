@@ -2,29 +2,36 @@
 source: tests/integration_tests.rs
 expression: output
 ---
+quint:
+flash_loan_stubs.qnt:
 module flash_loan {
   
-  import basicSpells.* from "../lib/basicSpells"
-  import cw_types.* from "../lib/cw_types"
-  import messaging.* from "../lib/messaging"
-  import bank from "../lib/bank"
+  import basicSpells.* from "./lib/basicSpells"
+  import cw_types.* from "./lib/cw_types"
+  import cw_utils.* from "./lib/cw_utils"
+  import messaging.* from "./lib/messaging"
+  import bank from "./lib/bank"
 
   
   var contract_state: ContractState
-  var return: Result
+  var result: Result
   var bank: bank::Bank
   var time: int
 
   
-  pure val CONTRACT_ADDRESS = "<contract>"
+  pure val CONTRACT_ADDRESS = "contract0"
 
   
-  pure val ADDRESSES = Set("s1", "s2", "s3", CONTRACT_ADDRESS)
+  pure val ADDRESSES = Set("sender1", "sender2", "sender3", CONTRACT_ADDRESS)
   pure val DENOMS = Set("d1", "uawesome")
   pure val MAX_AMOUNT = 200
 
 
-  pure def instantiate(state: ContractState, _env: Env, info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_FlashLoan(__r) => flash_loan(state, env, info)
     | ExecuteMsg_SettleLoan(__r) => settle_loan(state, env, info)
@@ -32,7 +39,11 @@ module flash_loan {
     | ExecuteMsg_WithdrawFunds(__r) => withdraw_funds(state, env, info, __r.recipient)
     | ExecuteMsg_TransferOwner(__r) => transfer_owner(state, info, __r.new_owner)
   }
-  pure def flash_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def flash_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action flash_loan_action = {
     // TODO: Change next line according to fund expectations
@@ -41,7 +52,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForflash_loan
     execute_message(message, max_funds)
   }
-  pure def settle_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def settle_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action settle_loan_action = {
     // TODO: Change next line according to fund expectations
@@ -50,7 +65,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForsettle_loan
     execute_message(message, max_funds)
   }
-  pure def set_proxy_addr(state: ContractState, info: MessageInfo, proxy_addr: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def set_proxy_addr(state: ContractState, info: MessageInfo, proxy_addr: str): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action set_proxy_addr_action = {
     // TODO: Change next line according to fund expectations
@@ -59,7 +78,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForset_proxy_addr
     execute_message(message, max_funds)
   }
-  pure def withdraw_funds(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def withdraw_funds(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action withdraw_funds_action = {
     // TODO: Change next line according to fund expectations
@@ -68,7 +91,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForwithdraw_funds
     execute_message(message, max_funds)
   }
-  pure def transfer_owner(state: ContractState, info: MessageInfo, new_owner: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def transfer_owner(state: ContractState, info: MessageInfo, new_owner: Addr): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action transfer_owner_action = {
     // TODO: Change next line according to fund expectations
@@ -82,11 +109,11 @@ module flash_loan {
 
   type ContractState = {
     config: Config,
-  flash_loan: FlashLoanState
+    flash_loan: FlashLoanState
   }
 
   pure val init_contract_state = {
-        config: <missing-type>,
+    config: <missing-type>,
     flash_loan: <missing-type>
   }
 
@@ -101,20 +128,32 @@ module flash_loan {
     advance_time,
   }
 
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
 
   val env_val = { block: { time: time } }
 
-  action init = all {
-    contract_state' = init_contract_state,
-    bank' = init_bank_state,
-    return' = Err("No previous request"),
-    time' = 0,
+  action init = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = 0
+
+    nondet sender = Set("admin").oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{ denom: denom, amount: amount }]
+    val info = { sender: sender, funds: funds }
+
+    pure val message: InstantiateMsg = <missing-type>
+    pure val r = instantiate(init_contract_state, { block: { time: 0 } }, info, message)
+
+    all {
+      contract_state' = r._2,
+      bank' = init_bank_state,
+      result' = r._1,
+      time' = 0,
+    }
   }
 
 
@@ -128,9 +167,12 @@ module flash_loan {
     val r = execute(contract_state, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
-      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
-                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
-      return' = r._1,
+      match r._1 {
+        | Ok(_) => bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                               .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount))
+        | Err(_) => bank' = bank
+      },
+      result' = r._1,
       contract_state' = r._2,
     }
   }
@@ -138,16 +180,16 @@ module flash_loan {
   action advance_time = time' = time + 1
 
   action step = {
-    val message_getting = get_message(return)
-    val new_return = message_getting._1
+    val message_getting = get_message(result)
+    val new_result = message_getting._1
     val opt_message = message_getting._2
     match opt_message {
       | Some(submsg) => {
-          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val current_state = { bank: bank, result: new_result, contract_state: contract_state }
           val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
           all {
             bank' = new_state.bank,
-            return' = new_state.return,
+            result' = new_state.result,
             contract_state' = new_state.contract_state,
             advance_time,
           }
@@ -157,33 +199,47 @@ module flash_loan {
   }
 
 }
+
+
+
+
+mock_arb_stubs.qnt:
 module mock_arb {
   
-  import basicSpells.* from "../lib/basicSpells"
-  import cw_types.* from "../lib/cw_types"
-  import messaging.* from "../lib/messaging"
-  import bank from "../lib/bank"
+  import basicSpells.* from "./lib/basicSpells"
+  import cw_types.* from "./lib/cw_types"
+  import cw_utils.* from "./lib/cw_utils"
+  import messaging.* from "./lib/messaging"
+  import bank from "./lib/bank"
 
   
   var contract_state: ContractState
-  var return: Result
+  var result: Result
   var bank: bank::Bank
   var time: int
 
   
-  pure val CONTRACT_ADDRESS = "<contract>"
+  pure val CONTRACT_ADDRESS = "contract0"
 
   
-  pure val ADDRESSES = Set("s1", "s2", "s3", CONTRACT_ADDRESS)
+  pure val ADDRESSES = Set("sender1", "sender2", "sender3", CONTRACT_ADDRESS)
   pure val DENOMS = Set("d1", "uawesome")
   pure val MAX_AMOUNT = 200
 
 
-  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_Arbitrage(__r) => arbitrage(state, env, info, __r.recipient)
   }
-  pure def arbitrage(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def arbitrage(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action arbitrage_action = {
     // TODO: Change next line according to fund expectations
@@ -199,7 +255,7 @@ module mock_arb {
   }
 
   pure val init_contract_state = {
-        config: <missing-type>
+    config: <missing-type>
   }
 
   action execute_step = all {
@@ -209,20 +265,32 @@ module mock_arb {
     advance_time,
   }
 
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
 
   val env_val = { block: { time: time } }
 
-  action init = all {
-    contract_state' = init_contract_state,
-    bank' = init_bank_state,
-    return' = Err("No previous request"),
-    time' = 0,
+  action init = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = 0
+
+    nondet sender = Set("admin").oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{ denom: denom, amount: amount }]
+    val info = { sender: sender, funds: funds }
+
+    pure val message: InstantiateMsg = <missing-type>
+    pure val r = instantiate(init_contract_state, { block: { time: 0 } }, info, message)
+
+    all {
+      contract_state' = r._2,
+      bank' = init_bank_state,
+      result' = r._1,
+      time' = 0,
+    }
   }
 
 
@@ -236,9 +304,12 @@ module mock_arb {
     val r = execute(contract_state, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
-      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
-                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
-      return' = r._1,
+      match r._1 {
+        | Ok(_) => bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                               .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount))
+        | Err(_) => bank' = bank
+      },
+      result' = r._1,
       contract_state' = r._2,
     }
   }
@@ -246,16 +317,16 @@ module mock_arb {
   action advance_time = time' = time + 1
 
   action step = {
-    val message_getting = get_message(return)
-    val new_return = message_getting._1
+    val message_getting = get_message(result)
+    val new_result = message_getting._1
     val opt_message = message_getting._2
     match opt_message {
       | Some(submsg) => {
-          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val current_state = { bank: bank, result: new_result, contract_state: contract_state }
           val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
           all {
             bank' = new_state.bank,
-            return' = new_state.return,
+            result' = new_state.result,
             contract_state' = new_state.contract_state,
             advance_time,
           }
@@ -265,33 +336,45 @@ module mock_arb {
   }
 
 }
+
+
+proxy_stubs.qnt:
 module proxy {
   
-  import basicSpells.* from "../lib/basicSpells"
-  import cw_types.* from "../lib/cw_types"
-  import messaging.* from "../lib/messaging"
-  import bank from "../lib/bank"
+  import basicSpells.* from "./lib/basicSpells"
+  import cw_types.* from "./lib/cw_types"
+  import cw_utils.* from "./lib/cw_utils"
+  import messaging.* from "./lib/messaging"
+  import bank from "./lib/bank"
 
   
   var contract_state: ContractState
-  var return: Result
+  var result: Result
   var bank: bank::Bank
   var time: int
 
   
-  pure val CONTRACT_ADDRESS = "<contract>"
+  pure val CONTRACT_ADDRESS = "contract0"
 
   
-  pure val ADDRESSES = Set("s1", "s2", "s3", CONTRACT_ADDRESS)
+  pure val ADDRESSES = Set("sender1", "sender2", "sender3", CONTRACT_ADDRESS)
   pure val DENOMS = Set("d1", "uawesome")
   pure val MAX_AMOUNT = 200
 
 
-  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_RequestFlashLoan(__r) => request_flash_loan(state, env, info, __r.recipient, __r.msg)
   }
-  pure def request_flash_loan(state: ContractState, env: Env, _info: MessageInfo, recipient: Addr, msg: Binary): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def request_flash_loan(state: ContractState, env: Env, _info: MessageInfo, recipient: Addr, msg: Binary): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action request_flash_loan_action = {
     // TODO: Change next line according to fund expectations
@@ -307,7 +390,7 @@ module proxy {
   }
 
   pure val init_contract_state = {
-        config: <missing-type>
+    config: <missing-type>
   }
 
   action execute_step = all {
@@ -317,20 +400,32 @@ module proxy {
     advance_time,
   }
 
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
 
   val env_val = { block: { time: time } }
 
-  action init = all {
-    contract_state' = init_contract_state,
-    bank' = init_bank_state,
-    return' = Err("No previous request"),
-    time' = 0,
+  action init = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = 0
+
+    nondet sender = Set("admin").oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{ denom: denom, amount: amount }]
+    val info = { sender: sender, funds: funds }
+
+    pure val message: InstantiateMsg = <missing-type>
+    pure val r = instantiate(init_contract_state, { block: { time: 0 } }, info, message)
+
+    all {
+      contract_state' = r._2,
+      bank' = init_bank_state,
+      result' = r._1,
+      time' = 0,
+    }
   }
 
 
@@ -344,9 +439,12 @@ module proxy {
     val r = execute(contract_state, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
-      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
-                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
-      return' = r._1,
+      match r._1 {
+        | Ok(_) => bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                               .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount))
+        | Err(_) => bank' = bank
+      },
+      result' = r._1,
       contract_state' = r._2,
     }
   }
@@ -354,16 +452,16 @@ module proxy {
   action advance_time = time' = time + 1
 
   action step = {
-    val message_getting = get_message(return)
-    val new_return = message_getting._1
+    val message_getting = get_message(result)
+    val new_result = message_getting._1
     val opt_message = message_getting._2
     match opt_message {
       | Some(submsg) => {
-          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val current_state = { bank: bank, result: new_result, contract_state: contract_state }
           val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
           all {
             bank' = new_state.bank,
-            return' = new_state.return,
+            result' = new_state.result,
             contract_state' = new_state.contract_state,
             advance_time,
           }
@@ -372,4 +470,848 @@ module proxy {
     }
   }
 
+}
+
+
+mbt:
+mbt_flash_loan.rs:
+
+pub mod state_structs {
+    use num_bigint::BigInt;
+    use serde::Deserialize;
+    use std::collections::HashMap;
+    use itf::de::{self, As};
+    
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct ContractState {
+        pub config: Config,
+        pub flash_loan: FlashLoanState
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct NondetPicks {
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub sender: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub denom: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub amount: Option<BigInt>
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Response {
+        pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct State {
+        pub contract_state: ContractState,
+        pub bank: HashMap<String, HashMap<String, BigInt>>,
+        #[serde(with = "As::<de::Result::<_, _>>")]
+        pub result: Result<Response, String>,
+        pub action_taken: String,
+        pub nondet_picks: NondetPicks,
+        pub time: BigInt,
+    }
+
+}
+    
+#[cfg(test)]
+pub mod tests {
+    use flash_loan::contract;
+    use flash_loan::msg::{ExecuteMsg, InstantiateMsg};
+
+
+    use crate::state_structs::*;
+    use cosmwasm_std::{coin, Addr, Uint128};
+    use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
+    use itf::trace_from_str;
+    use num_bigint::BigInt;
+    use num_traits::{ToPrimitive, Zero};
+
+    pub const DENOM: &str = "uawesome";
+    pub const TICK: u64 = 1;
+
+    pub fn mint_tokens(mut app: App, recipient: String, denom: String, amount: Uint128) -> App {
+        app.sudo(cw_multi_test::SudoMsg::Bank(
+            cw_multi_test::BankSudo::Mint {
+                to_address: recipient.to_owned(),
+                amount: vec![coin(amount.u128(), denom)],
+            },
+        ))
+        .unwrap();
+        app
+    }
+
+    fn compare_state(test_state: &TestState, app: &App, state: &State) {
+        // compare contract balances
+        let balance = app
+            .wrap()
+            .query_balance(&test_state.contract_addr, DENOM)
+            .unwrap()
+            .amount;
+        let trace_balance = state
+            .bank
+            .get(&test_state.contract_addr.to_string())
+            .and_then(|x| x.get(DENOM))
+            .and_then(|x| x.to_u128())
+            .unwrap_or(0);
+        println!(
+            "Contract balance ({:?}) for {DENOM}: {:?} vs {:?}",
+            test_state.contract_addr,
+            balance,
+            Uint128::new(trace_balance)
+        );
+        assert_eq!(balance, Uint128::new(trace_balance));
+
+        // TODO: Query the contract and compare the state as you wish
+    }
+
+    fn compare_result(
+        trace_result: Result<Response, String>,
+        app_result: Result<AppResponse, anyhow::Error>,
+    ) {
+        if trace_result.is_ok() {
+            assert!(
+                app_result.is_ok(),
+                "Action unexpectedly failed, error: {:?}",
+                app_result.err()
+            );
+            println!("Action successful as expected");
+        } else {
+            assert!(
+                app_result.is_err(),
+                "Expected action to fail with error: {:?}",
+                trace_result.err()
+            );
+            println!("Action failed as expected");
+        }
+    }
+
+    fn funds_from_trace(amount: Option<BigInt>, denom: Option<String>) -> Vec<cosmwasm_std::Coin> {
+        if amount.is_none() || denom.is_none() || amount == Some(Zero::zero()) {
+            return vec![];
+        }
+
+        vec![coin(
+            amount.as_ref().unwrap().to_u128().unwrap(),
+            denom.unwrap(),
+        )]
+    }
+
+    // Testing is stateful.
+    struct TestState {
+        // we will only know the contract address once we have processed an `instantiate` step
+        pub contract_addr: Addr,
+    }
+
+    #[test]
+    fn model_test() {
+        let mut app = App::default();
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
+        let code_id = app.store_code(Box::new(code));
+
+        // create test state
+        let mut test_state = TestState {
+            contract_addr: Addr::unchecked("contract0"),
+        };
+
+        // load trace data
+        let data = include_str!("../quint/test.itf.json");
+        let trace: itf::Trace<State> = trace_from_str(data).unwrap();
+
+        for s in trace.states {
+            let last_result = s.value.result.clone();
+            if last_result.is_ok() && !last_result.unwrap().messages.is_empty() {
+                println!("Processing messages, skipping");
+                continue;
+            }
+
+            let action_taken = &s.value.action_taken;
+            let nondet_picks = &s.value.nondet_picks;
+            let amount = nondet_picks.amount.clone();
+            let denom = nondet_picks.denom.clone();
+            let sender = nondet_picks.sender.clone();
+
+            println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
+
+            match action_taken.as_str() {
+
+
+               "flash_loan_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ConstructorForExecuteMsg::FlashLoan {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+               "q::init" => {
+                    println!("Initializing contract.");
+
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = InstantiateMsg {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        "test",
+                        None,
+                    ).unwrap();
+
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
+
+               }
+
+
+               "set_proxy_addr_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ConstructorForExecuteMsg::SetProxyAddr {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+               "settle_loan_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ConstructorForExecuteMsg::SettleLoan {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+               "transfer_owner_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ConstructorForExecuteMsg::TransferOwner {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+               "withdraw_funds_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ConstructorForExecuteMsg::WithdrawFunds {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+                _ => panic!("Invalid action taken"),
+            }
+            compare_state(&test_state, &app, &(s.value.clone()));
+            println!(
+                "clock is advancing for {} seconds",
+                TICK
+            );
+            app.update_block(|block| {
+                block.time = block.time.plus_seconds(TICK);
+            });
+            println!("-----------------------------------");
+        }
+    }
+}
+
+
+mbt_mock_arb.rs:
+
+pub mod state_structs {
+    use num_bigint::BigInt;
+    use serde::Deserialize;
+    use std::collections::HashMap;
+    use itf::de::{self, As};
+    
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct ContractState {
+        pub config: Config
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct NondetPicks {
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub sender: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub denom: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub amount: Option<BigInt>
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Response {
+        pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct State {
+        pub contract_state: ContractState,
+        pub bank: HashMap<String, HashMap<String, BigInt>>,
+        #[serde(with = "As::<de::Result::<_, _>>")]
+        pub result: Result<Response, String>,
+        pub action_taken: String,
+        pub nondet_picks: NondetPicks,
+        pub time: BigInt,
+    }
+
+}
+    
+#[cfg(test)]
+pub mod tests {
+    use mock_arb::contract;
+    use mock_arb::msg::{ExecuteMsg, InstantiateMsg};
+
+
+    use crate::state_structs::*;
+    use cosmwasm_std::{coin, Addr, Uint128};
+    use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
+    use itf::trace_from_str;
+    use num_bigint::BigInt;
+    use num_traits::{ToPrimitive, Zero};
+
+    pub const DENOM: &str = "uawesome";
+    pub const TICK: u64 = 1;
+
+    pub fn mint_tokens(mut app: App, recipient: String, denom: String, amount: Uint128) -> App {
+        app.sudo(cw_multi_test::SudoMsg::Bank(
+            cw_multi_test::BankSudo::Mint {
+                to_address: recipient.to_owned(),
+                amount: vec![coin(amount.u128(), denom)],
+            },
+        ))
+        .unwrap();
+        app
+    }
+
+    fn compare_state(test_state: &TestState, app: &App, state: &State) {
+        // compare contract balances
+        let balance = app
+            .wrap()
+            .query_balance(&test_state.contract_addr, DENOM)
+            .unwrap()
+            .amount;
+        let trace_balance = state
+            .bank
+            .get(&test_state.contract_addr.to_string())
+            .and_then(|x| x.get(DENOM))
+            .and_then(|x| x.to_u128())
+            .unwrap_or(0);
+        println!(
+            "Contract balance ({:?}) for {DENOM}: {:?} vs {:?}",
+            test_state.contract_addr,
+            balance,
+            Uint128::new(trace_balance)
+        );
+        assert_eq!(balance, Uint128::new(trace_balance));
+
+        // TODO: Query the contract and compare the state as you wish
+    }
+
+    fn compare_result(
+        trace_result: Result<Response, String>,
+        app_result: Result<AppResponse, anyhow::Error>,
+    ) {
+        if trace_result.is_ok() {
+            assert!(
+                app_result.is_ok(),
+                "Action unexpectedly failed, error: {:?}",
+                app_result.err()
+            );
+            println!("Action successful as expected");
+        } else {
+            assert!(
+                app_result.is_err(),
+                "Expected action to fail with error: {:?}",
+                trace_result.err()
+            );
+            println!("Action failed as expected");
+        }
+    }
+
+    fn funds_from_trace(amount: Option<BigInt>, denom: Option<String>) -> Vec<cosmwasm_std::Coin> {
+        if amount.is_none() || denom.is_none() || amount == Some(Zero::zero()) {
+            return vec![];
+        }
+
+        vec![coin(
+            amount.as_ref().unwrap().to_u128().unwrap(),
+            denom.unwrap(),
+        )]
+    }
+
+    // Testing is stateful.
+    struct TestState {
+        // we will only know the contract address once we have processed an `instantiate` step
+        pub contract_addr: Addr,
+    }
+
+    #[test]
+    fn model_test() {
+        let mut app = App::default();
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
+        let code_id = app.store_code(Box::new(code));
+
+        // create test state
+        let mut test_state = TestState {
+            contract_addr: Addr::unchecked("contract0"),
+        };
+
+        // load trace data
+        let data = include_str!("../quint/test.itf.json");
+        let trace: itf::Trace<State> = trace_from_str(data).unwrap();
+
+        for s in trace.states {
+            let last_result = s.value.result.clone();
+            if last_result.is_ok() && !last_result.unwrap().messages.is_empty() {
+                println!("Processing messages, skipping");
+                continue;
+            }
+
+            let action_taken = &s.value.action_taken;
+            let nondet_picks = &s.value.nondet_picks;
+            let amount = nondet_picks.amount.clone();
+            let denom = nondet_picks.denom.clone();
+            let sender = nondet_picks.sender.clone();
+
+            println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
+
+            match action_taken.as_str() {
+
+
+               "arbitrage_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ConstructorForExecuteMsg::Arbitrage {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+
+               "q::init" => {
+                    println!("Initializing contract.");
+
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = InstantiateMsg {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        "test",
+                        None,
+                    ).unwrap();
+
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
+
+               }
+
+                _ => panic!("Invalid action taken"),
+            }
+            compare_state(&test_state, &app, &(s.value.clone()));
+            println!(
+                "clock is advancing for {} seconds",
+                TICK
+            );
+            app.update_block(|block| {
+                block.time = block.time.plus_seconds(TICK);
+            });
+            println!("-----------------------------------");
+        }
+    }
+}
+
+
+mbt_proxy.rs:
+
+pub mod state_structs {
+    use num_bigint::BigInt;
+    use serde::Deserialize;
+    use std::collections::HashMap;
+    use itf::de::{self, As};
+    
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct ContractState {
+        pub config: Config
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct NondetPicks {
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub sender: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub denom: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub amount: Option<BigInt>
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Response {
+        pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct State {
+        pub contract_state: ContractState,
+        pub bank: HashMap<String, HashMap<String, BigInt>>,
+        #[serde(with = "As::<de::Result::<_, _>>")]
+        pub result: Result<Response, String>,
+        pub action_taken: String,
+        pub nondet_picks: NondetPicks,
+        pub time: BigInt,
+    }
+
+}
+    
+#[cfg(test)]
+pub mod tests {
+    use proxy::contract;
+    use proxy::msg::{ExecuteMsg, InstantiateMsg};
+
+
+    use crate::state_structs::*;
+    use cosmwasm_std::{coin, Addr, Uint128};
+    use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
+    use itf::trace_from_str;
+    use num_bigint::BigInt;
+    use num_traits::{ToPrimitive, Zero};
+
+    pub const DENOM: &str = "uawesome";
+    pub const TICK: u64 = 1;
+
+    pub fn mint_tokens(mut app: App, recipient: String, denom: String, amount: Uint128) -> App {
+        app.sudo(cw_multi_test::SudoMsg::Bank(
+            cw_multi_test::BankSudo::Mint {
+                to_address: recipient.to_owned(),
+                amount: vec![coin(amount.u128(), denom)],
+            },
+        ))
+        .unwrap();
+        app
+    }
+
+    fn compare_state(test_state: &TestState, app: &App, state: &State) {
+        // compare contract balances
+        let balance = app
+            .wrap()
+            .query_balance(&test_state.contract_addr, DENOM)
+            .unwrap()
+            .amount;
+        let trace_balance = state
+            .bank
+            .get(&test_state.contract_addr.to_string())
+            .and_then(|x| x.get(DENOM))
+            .and_then(|x| x.to_u128())
+            .unwrap_or(0);
+        println!(
+            "Contract balance ({:?}) for {DENOM}: {:?} vs {:?}",
+            test_state.contract_addr,
+            balance,
+            Uint128::new(trace_balance)
+        );
+        assert_eq!(balance, Uint128::new(trace_balance));
+
+        // TODO: Query the contract and compare the state as you wish
+    }
+
+    fn compare_result(
+        trace_result: Result<Response, String>,
+        app_result: Result<AppResponse, anyhow::Error>,
+    ) {
+        if trace_result.is_ok() {
+            assert!(
+                app_result.is_ok(),
+                "Action unexpectedly failed, error: {:?}",
+                app_result.err()
+            );
+            println!("Action successful as expected");
+        } else {
+            assert!(
+                app_result.is_err(),
+                "Expected action to fail with error: {:?}",
+                trace_result.err()
+            );
+            println!("Action failed as expected");
+        }
+    }
+
+    fn funds_from_trace(amount: Option<BigInt>, denom: Option<String>) -> Vec<cosmwasm_std::Coin> {
+        if amount.is_none() || denom.is_none() || amount == Some(Zero::zero()) {
+            return vec![];
+        }
+
+        vec![coin(
+            amount.as_ref().unwrap().to_u128().unwrap(),
+            denom.unwrap(),
+        )]
+    }
+
+    // Testing is stateful.
+    struct TestState {
+        // we will only know the contract address once we have processed an `instantiate` step
+        pub contract_addr: Addr,
+    }
+
+    #[test]
+    fn model_test() {
+        let mut app = App::default();
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
+        let code_id = app.store_code(Box::new(code));
+
+        // create test state
+        let mut test_state = TestState {
+            contract_addr: Addr::unchecked("contract0"),
+        };
+
+        // load trace data
+        let data = include_str!("../quint/test.itf.json");
+        let trace: itf::Trace<State> = trace_from_str(data).unwrap();
+
+        for s in trace.states {
+            let last_result = s.value.result.clone();
+            if last_result.is_ok() && !last_result.unwrap().messages.is_empty() {
+                println!("Processing messages, skipping");
+                continue;
+            }
+
+            let action_taken = &s.value.action_taken;
+            let nondet_picks = &s.value.nondet_picks;
+            let amount = nondet_picks.amount.clone();
+            let denom = nondet_picks.denom.clone();
+            let sender = nondet_picks.sender.clone();
+
+            println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
+
+            match action_taken.as_str() {
+
+
+               "q::init" => {
+                    println!("Initializing contract.");
+
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = InstantiateMsg {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        "test",
+                        None,
+                    ).unwrap();
+
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
+
+               }
+
+
+               "request_flash_loan_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ConstructorForExecuteMsg::RequestFlashLoan {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+                _ => panic!("Invalid action taken"),
+            }
+            compare_state(&test_state, &app, &(s.value.clone()));
+            println!(
+                "clock is advancing for {} seconds",
+                TICK
+            );
+            app.update_block(|block| {
+                block.time = block.time.plus_seconds(TICK);
+            });
+            println!("-----------------------------------");
+        }
+    }
 }

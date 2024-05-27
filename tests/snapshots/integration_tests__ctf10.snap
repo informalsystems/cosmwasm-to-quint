@@ -2,24 +2,29 @@
 source: tests/integration_tests.rs
 expression: output
 ---
+quint:
+
+
+oaksecurity_cosmwasm_ctf_10_stubs.qnt:
 module oaksecurity_cosmwasm_ctf_10 {
   
-  import basicSpells.* from "../lib/basicSpells"
-  import cw_types.* from "../lib/cw_types"
-  import messaging.* from "../lib/messaging"
-  import bank from "../lib/bank"
+  import basicSpells.* from "./lib/basicSpells"
+  import cw_types.* from "./lib/cw_types"
+  import cw_utils.* from "./lib/cw_utils"
+  import messaging.* from "./lib/messaging"
+  import bank from "./lib/bank"
 
   
   var contract_state: ContractState
-  var return: Result
+  var result: Result
   var bank: bank::Bank
   var time: int
 
   
-  pure val CONTRACT_ADDRESS = "<contract>"
+  pure val CONTRACT_ADDRESS = "contract0"
 
   
-  pure val ADDRESSES = Set("s1", "s2", "s3", CONTRACT_ADDRESS)
+  pure val ADDRESSES = Set("sender1", "sender2", "sender3", CONTRACT_ADDRESS)
   pure val DENOMS = Set("d1", "uawesome")
   pure val MAX_AMOUNT = 200
 
@@ -29,11 +34,19 @@ module oaksecurity_cosmwasm_ctf_10 {
   type Whitelist = { users: List[str] }
   type ExecuteMsg =
     | ExecuteMsg_Mint
-  pure def instantiate(state: ContractState, env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_Mint(__r) => mint(state, env, info)
   }
-  pure def mint(state: ContractState, _env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def mint(state: ContractState, _env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action mint_action = {
     // TODO: Change next line according to fund expectations
@@ -42,16 +55,20 @@ module oaksecurity_cosmwasm_ctf_10 {
     pure val message: ExecuteMsg = ExecuteMsg_Mint
     execute_message(message, max_funds)
   }
-  pure def reply(state: ContractState, _env: Env, reply: Reply): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def reply(state: ContractState, _env: Env, reply: Reply): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure val DENOM = "uawesome"
 
   type ContractState = {
     config: Config,
-  whitelist: Whitelist
+    whitelist: Whitelist
   }
 
   pure val init_contract_state = {
-        config: { nft_contract: "s1",mint_per_user: 0,total_tokens: 0 },
+    config: { nft_contract: "s1",mint_per_user: 0,total_tokens: 0 },
     whitelist: { users: [] }
   }
 
@@ -68,11 +85,25 @@ module oaksecurity_cosmwasm_ctf_10 {
 
   val env_val = { block: { time: time } }
 
-  action init = all {
-    contract_state' = init_contract_state,
-    bank' = init_bank_state,
-    return' = Err("No previous request"),
-    time' = 0,
+  action init = {
+    // TODO: Change next line according to fund expectations
+    pure val max_funds = 0
+
+    nondet sender = Set("admin").oneOf()
+    nondet denom = DENOMS.oneOf()
+    nondet amount = 0.to(max_funds).oneOf()
+    val funds = [{ denom: denom, amount: amount }]
+    val info = { sender: sender, funds: funds }
+
+    pure val message: InstantiateMsg = { cw721_code_id: 0,mint_per_user: 0,whitelisted_users: [] }
+    pure val r = instantiate(init_contract_state, { block: { time: 0 } }, info, message)
+
+    all {
+      contract_state' = r._2,
+      bank' = init_bank_state,
+      result' = r._1,
+      time' = 0,
+    }
   }
 
 
@@ -86,9 +117,12 @@ module oaksecurity_cosmwasm_ctf_10 {
     val r = execute(contract_state, env_val, info, message)
     all {
       bank.get(sender).get(denom) >= amount,
-      bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
-                  .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount)),
-      return' = r._1,
+      match r._1 {
+        | Ok(_) => bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                               .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount))
+        | Err(_) => bank' = bank
+      },
+      result' = r._1,
       contract_state' = r._2,
     }
   }
@@ -96,16 +130,16 @@ module oaksecurity_cosmwasm_ctf_10 {
   action advance_time = time' = time + 1
 
   action step = {
-    val message_getting = get_message(return)
-    val new_return = message_getting._1
+    val message_getting = get_message(result)
+    val new_result = message_getting._1
     val opt_message = message_getting._2
     match opt_message {
       | Some(submsg) => {
-          val current_state = { bank: bank, return: new_return, contract_state: contract_state }
+          val current_state = { bank: bank, result: new_result, contract_state: contract_state }
           val new_state = process_message(current_state, env_val, CONTRACT_ADDRESS, submsg, reply)
           all {
             bank' = new_state.bank,
-            return' = new_state.return,
+            result' = new_state.result,
             contract_state' = new_state.contract_state,
             advance_time,
           }
@@ -114,4 +148,278 @@ module oaksecurity_cosmwasm_ctf_10 {
     }
   }
 
+}
+
+
+mbt:
+mbt_oaksecurity_cosmwasm_ctf_10.rs:
+
+pub mod state_structs {
+    use num_bigint::BigInt;
+    use serde::Deserialize;
+    use std::collections::HashMap;
+    use itf::de::{self, As};
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Config {
+        pub nft_contract: String,
+        pub mint_per_user: BigInt,
+        pub total_tokens: BigInt
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct InstantiateMsg {
+        pub cw721_code_id: BigInt,
+        pub mint_per_user: BigInt,
+        pub whitelisted_users: Vec<String>
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Whitelist {
+        pub users: Vec<String>
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct ContractState {
+        pub config: Config,
+        pub whitelist: Whitelist
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct NondetPicks {
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub sender: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub denom: Option<String>,
+        
+        #[serde(with = "As::<de::Option::<_>>")]
+        pub amount: Option<BigInt>
+    }
+    
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Response {
+        pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct State {
+        pub contract_state: ContractState,
+        pub bank: HashMap<String, HashMap<String, BigInt>>,
+        #[serde(with = "As::<de::Result::<_, _>>")]
+        pub result: Result<Response, String>,
+        pub action_taken: String,
+        pub nondet_picks: NondetPicks,
+        pub time: BigInt,
+    }
+
+}
+    
+#[cfg(test)]
+pub mod tests {
+    use oaksecurity_cosmwasm_ctf_10::contract;
+    use oaksecurity_cosmwasm_ctf_10::msg::{ExecuteMsg, InstantiateMsg};
+
+
+    use crate::state_structs::*;
+    use cosmwasm_std::{coin, Addr, Uint128};
+    use cw_multi_test::{App, AppResponse, ContractWrapper, Executor};
+    use itf::trace_from_str;
+    use num_bigint::BigInt;
+    use num_traits::{ToPrimitive, Zero};
+
+    pub const DENOM: &str = "uawesome";
+    pub const TICK: u64 = 1;
+
+    pub fn mint_tokens(mut app: App, recipient: String, denom: String, amount: Uint128) -> App {
+        app.sudo(cw_multi_test::SudoMsg::Bank(
+            cw_multi_test::BankSudo::Mint {
+                to_address: recipient.to_owned(),
+                amount: vec![coin(amount.u128(), denom)],
+            },
+        ))
+        .unwrap();
+        app
+    }
+
+    fn compare_state(test_state: &TestState, app: &App, state: &State) {
+        // compare contract balances
+        let balance = app
+            .wrap()
+            .query_balance(&test_state.contract_addr, DENOM)
+            .unwrap()
+            .amount;
+        let trace_balance = state
+            .bank
+            .get(&test_state.contract_addr.to_string())
+            .and_then(|x| x.get(DENOM))
+            .and_then(|x| x.to_u128())
+            .unwrap_or(0);
+        println!(
+            "Contract balance ({:?}) for {DENOM}: {:?} vs {:?}",
+            test_state.contract_addr,
+            balance,
+            Uint128::new(trace_balance)
+        );
+        assert_eq!(balance, Uint128::new(trace_balance));
+
+        // TODO: Query the contract and compare the state as you wish
+    }
+
+    fn compare_result(
+        trace_result: Result<Response, String>,
+        app_result: Result<AppResponse, anyhow::Error>,
+    ) {
+        if trace_result.is_ok() {
+            assert!(
+                app_result.is_ok(),
+                "Action unexpectedly failed, error: {:?}",
+                app_result.err()
+            );
+            println!("Action successful as expected");
+        } else {
+            assert!(
+                app_result.is_err(),
+                "Expected action to fail with error: {:?}",
+                trace_result.err()
+            );
+            println!("Action failed as expected");
+        }
+    }
+
+    fn funds_from_trace(amount: Option<BigInt>, denom: Option<String>) -> Vec<cosmwasm_std::Coin> {
+        if amount.is_none() || denom.is_none() || amount == Some(Zero::zero()) {
+            return vec![];
+        }
+
+        vec![coin(
+            amount.as_ref().unwrap().to_u128().unwrap(),
+            denom.unwrap(),
+        )]
+    }
+
+    // Testing is stateful.
+    struct TestState {
+        // we will only know the contract address once we have processed an `instantiate` step
+        pub contract_addr: Addr,
+    }
+
+    #[test]
+    fn model_test() {
+        let mut app = App::default();
+        let code = ContractWrapper::new(contract::execute, contract::instantiate, contract::query);
+        let code_id = app.store_code(Box::new(code));
+
+        // create test state
+        let mut test_state = TestState {
+            contract_addr: Addr::unchecked("contract0"),
+        };
+
+        // load trace data
+        let data = include_str!("../quint/test.itf.json");
+        let trace: itf::Trace<State> = trace_from_str(data).unwrap();
+
+        for s in trace.states {
+            let last_result = s.value.result.clone();
+            if last_result.is_ok() && !last_result.unwrap().messages.is_empty() {
+                println!("Processing messages, skipping");
+                continue;
+            }
+
+            let action_taken = &s.value.action_taken;
+            let nondet_picks = &s.value.nondet_picks;
+            let amount = nondet_picks.amount.clone();
+            let denom = nondet_picks.denom.clone();
+            let sender = nondet_picks.sender.clone();
+
+            println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
+
+            match action_taken.as_str() {
+
+
+               "q::init" => {
+                    println!("Initializing contract.");
+
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = InstantiateMsg { cw721_code_id: 0, mint_per_user: 0, whitelisted_users: [] };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    test_state.contract_addr = app.instantiate_contract(
+                        code_id,
+                        sender,
+                        &msg,
+                        &funds,
+                        "test",
+                        None,
+                    ).unwrap();
+
+                    for (addr, coins) in s.value.bank.clone().iter() {
+                        for (denom, amount) in coins.iter() {
+                            app = mint_tokens(
+                                app,
+                                addr.clone(),
+                                denom.to_string(),
+                                Uint128::new(amount.to_u128().unwrap()),
+                            );
+                        }
+                    }
+
+               }
+
+
+               "mint_action" => {
+                    let sender = Addr::unchecked(sender.unwrap());
+                    let funds = funds_from_trace(amount, denom);
+
+                    let msg = ExecuteMsg::Mint {  };
+                    println!("Message: {:?}", msg);
+                    println!("Sender: {:?}", sender);
+                    println!("Funds: {:?}", funds);
+
+                    let res = app.execute_contract(
+                        sender,
+                        test_state.contract_addr.clone(),
+                        &msg,
+                        &funds,
+                    );
+
+                    compare_result(s.value.result.clone(), res)
+                }
+
+                _ => panic!("Invalid action taken"),
+            }
+            compare_state(&test_state, &app, &(s.value.clone()));
+            println!(
+                "clock is advancing for {} seconds",
+                TICK
+            );
+            app.update_block(|block| {
+                block.time = block.time.plus_seconds(TICK);
+            });
+            println!("-----------------------------------");
+        }
+    }
 }

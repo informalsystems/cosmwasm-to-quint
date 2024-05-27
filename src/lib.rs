@@ -5,6 +5,7 @@
 pub mod boilerplate;
 pub mod nondet;
 pub mod state_extraction;
+pub mod test_generation;
 pub mod translate;
 pub mod types;
 
@@ -30,6 +31,7 @@ use translate::Translatable;
 use crate::types::{Constructor, Context};
 
 use crate::boilerplate::{post_items, pre_items};
+use crate::test_generation::generate_tests;
 
 // This struct is the plugin provided to the rustc_plugin framework,
 // and it must be exported for use by the CLI/driver binaries.
@@ -125,13 +127,14 @@ fn translate_all_items(tcx: TyCtxt) {
 
     items_by_crate.into_iter().for_each(|(crate_id, items)| {
         let crate_name = tcx.crate_name(crate_id);
-        traslate_items(tcx, crate_name.as_str(), items.collect_vec())
+        translate_items(tcx, crate_name.as_str(), items.collect_vec())
     });
 }
 
-fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
+fn translate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
     let mut ctx = Context {
         tcx,
+        crate_name,
         message_type_for_action: HashMap::from([(
             "instantiate".to_string(),
             "InstantiateMsg".to_string(),
@@ -147,6 +150,11 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
         structs: HashMap::new(),
         ops_with_mutability: vec![],
         contract_state: vec![],
+        nondet_picks: vec![
+            ("sender".to_string(), "Addr".to_string()),
+            ("denom".to_string(), "str".to_string()),
+            ("amount".to_string(), "int".to_string()),
+        ],
         // scoped
         record_fields: vec![],
         struct_fields: vec![],
@@ -170,12 +178,46 @@ fn traslate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) {
         return;
     }
 
-    println!("{}", pre_items(crate_name));
-    println!("{}", translated_items);
-    println!("{}", post_items(&ctx));
+    let module = format!(
+        "{}\n{}\n{}\n",
+        pre_items(crate_name),
+        translated_items,
+        post_items(&ctx)
+    );
+    let tests = generate_tests(ctx.clone());
+
+    // write module to file
+    std::fs::write(format!("quint/{}_stubs.qnt", crate_name), module)
+        .expect("Unable to write file");
+
+    // write tests to file
+    std::fs::write(format!("tests/mbt_{}.rs", crate_name), tests).expect("Unable to write file");
 }
 
 // This is the main entry point for the plugin. It prints the generated quint code to STDOUT.
 fn cosmwasm_to_quint(tcx: TyCtxt, _args: &CosmwasmToQuintPluginArgs) {
+    // create directories for the output files (if they don't already exist)
+    std::fs::create_dir_all("quint/lib").expect("Unable to create directory");
+    std::fs::create_dir_all("tests").expect("Unable to create directory");
+
+    // Read quint lib files. `include_str!` makes it so they are read at
+    // compilation time, and therefore get embeded in the cosmwasm-to-quint executable
+    let bank = include_str!("./quint-lib-files/bank.qnt");
+    let basic_spells = include_str!("./quint-lib-files/basicSpells.qnt");
+    let bounded_uint = include_str!("./quint-lib-files/BoundedUInt.qnt");
+    let cw_types = include_str!("./quint-lib-files/cw_types.qnt");
+    let cw_utils = include_str!("./quint-lib-files/cw_utils.qnt");
+    let messaging = include_str!("./quint-lib-files/messaging.qnt");
+
+    // Write the lib files in runtime
+    std::fs::write("quint/lib/bank.qnt", bank).expect("Unable to write file");
+    std::fs::write("quint/lib/basicSpells.qnt", basic_spells).expect("Unable to write file");
+    std::fs::write("quint/lib/BoundedUInt.qnt", bounded_uint).expect("Unable to write file");
+    std::fs::write("quint/lib/cw_types.qnt", cw_types).expect("Unable to write file");
+    std::fs::write("quint/lib/cw_utils.qnt", cw_utils).expect("Unable to write file");
+    std::fs::write("quint/lib/messaging.qnt", messaging).expect("Unable to write file");
+
     translate_all_items(tcx);
+
+    println!("Sucessfully generated files. Quint files are inside quint/ and test files are inside tests/.")
 }

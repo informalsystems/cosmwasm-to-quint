@@ -17,15 +17,16 @@ pub trait NondetValue: Translatable {
     fn nondet_definition(&self, ctx: &mut Context, ident: &str) -> String {
         let info = self.nondet_info(ctx, ident);
         let ty = self.translate(ctx);
-        nondet_info_to_def(info, &ty, ident)
+        nondet_info_to_def(ctx, info, &ty, ident)
     }
 }
 
 /// Converts a NondetInfo to a definition for a nondeterministic value with the
 /// given identifier, ready to be printed.
-fn nondet_info_to_def(info: NondetInfo, ty: &str, ident: &str) -> String {
+fn nondet_info_to_def(ctx: &mut Context, info: NondetInfo, ty: &str, ident: &str) -> String {
     let (auxiliary_defs, value) = info;
     if auxiliary_defs.is_empty() {
+        ctx.nondet_picks.push((ident.to_string(), ty.to_string()));
         format!("nondet {}: {} = {}.oneOf()", ident, ty, value)
     } else {
         format!(
@@ -82,25 +83,9 @@ fn nondet_value_for_list(ty: &rustc_hir::Ty<'_>, ctx: &mut Context, ident: &str)
         return (element_defs, format!("[{element_value}]"));
     }
 
-    let defs = vec![
-        format!(
-            "val possibilities = {}.map(i => Some(i)).union(Set(None))",
-            element_value
-        ),
-        "nondet v1 = possibilities.oneOf()".to_string(),
-        "nondet v2 = possibilities.oneOf()".to_string(),
-        "nondet v3 = possibilities.oneOf()".to_string(),
-    ];
+    let value = format!("{element_value}.allListsUpTo(2)");
 
-    let value = "
-    [v1, v2, v3].foldl([], (acc, v) => match v {
-      | Some(i) => acc.append(i)
-      | None => acc
-    })
-"
-    .to_string();
-
-    (defs, value)
+    (vec![], value)
 }
 
 fn nondet_value_for_option(ty: &rustc_hir::Ty<'_>, ctx: &mut Context, ident: &str) -> NondetInfo {
@@ -122,13 +107,14 @@ fn nondet_value_for_option(ty: &rustc_hir::Ty<'_>, ctx: &mut Context, ident: &st
 }
 
 impl NondetValue for Vec<Field> {
-    fn nondet_info(&self, _ctx: &mut Context, ident: &str) -> NondetInfo {
+    fn nondet_info(&self, ctx: &mut Context, ident: &str) -> NondetInfo {
         // Each field needs its own named nondet value, in the form of
         // `nondet ident_field_name: field_type = something.oneOf()`
         let defs = self
             .iter()
             .map(|field| {
                 nondet_info_to_def(
+                    ctx,
                     field.nondet_info.clone(),
                     &field.ty,
                     format!("{}_{}", ident, field.name).as_str(),
