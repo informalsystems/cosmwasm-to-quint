@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-*Semi-automated modelling and Model-Based Testing for CosmWasm contracts.*
+*Semi-automated modelling and Model-Based Testing for [CosmWasm](https://cosmwasm.com/) contracts.*
 1. Generate [Quint](https://github.com/informalsystems/quint) model stubs for a
    contract, and only worry about specifying the important bits - the
    entrypoints.
