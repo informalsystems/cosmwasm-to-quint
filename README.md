@@ -30,6 +30,16 @@ definitely better than writing everything from scratch!
 
 See section [Known Limitations](#known-limitations) for problems to expect.
 
+## Examples
+
+If you want to see examples of generated code without running the tool yourself,
+take a look at the [`tests/snapshots`
+folder](https://github.com/informalsystems/cosmwasm-to-quint/tree/main/tests/snapshots).
+We use [Oak Security's Capture the Flag
+challenges](https://github.com/oak-security/cosmwasm-ctf) as tests, and these
+snapshots contain both the model stubs and rust tests generated for each Capture
+the Flag (CTF) challenge.
+
 ## Setup and generation
 
 This project is implemented as a rust compiler plugin, in order to easily access
