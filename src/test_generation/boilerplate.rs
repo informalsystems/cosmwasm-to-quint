@@ -4,7 +4,7 @@ pub fn test_header(crate_name: &str) -> String {
 #[cfg(test)]
 pub mod tests {{
     use {crate_name}::contract;
-    use {crate_name}::msg::{{ExecuteMsg, InstantiateMsg, QueryMsg}};
+    use {crate_name}::msg::{{ExecuteMsg, InstantiateMsg}};
 
 {TEST_AUX}
 "
@@ -124,6 +124,7 @@ const TEST_AUX: &str = "
             let sender = nondet_picks.sender.clone();
 
             println!(\"Step number: {:?}\", s.meta.index);
+            println!(\"Result from trace: {:?}\", s.value.result.clone());
 
             match action_taken.as_str() {
 ";
@@ -194,10 +195,24 @@ pub const STRUCTS_MODULE_IMPORTS: &str = "use num_bigint::BigInt;
 pub const DEFAULT_STRUCTS: &str = "
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = \"tag\", content = \"value\")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
 
     #[derive(Clone, Debug, Deserialize)]
     pub struct Response {
         pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
     }
 
     #[derive(Clone, Debug, Deserialize)]

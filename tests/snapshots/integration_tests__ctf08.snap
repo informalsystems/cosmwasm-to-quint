@@ -42,7 +42,11 @@ module oaksecurity_cosmwasm_ctf_08 {
     | ExecuteMsg_NewTrade({ target: str, offered: str })
     | ExecuteMsg_AcceptTrade({ id: str, trader: str })
     | ExecuteMsg_CancelTrade({ id: str })
-  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_BuyNFT(__r) => exec_buy(state, env, info, __r.id)
     | ExecuteMsg_NewSale(__r) => exec_new_sale(state, env, info, __r.id, __r.price, __r.tradable)
@@ -51,7 +55,11 @@ module oaksecurity_cosmwasm_ctf_08 {
     | ExecuteMsg_AcceptTrade(__r) => exec_accept_trade(state, info, __r.id, __r.trader)
     | ExecuteMsg_CancelTrade(__r) => exec_cancel_trade(state, info, __r.id)
   }
-  pure def exec_new_sale(state: ContractState, env: Env, info: MessageInfo, id: str, price: int, tradable: bool): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def exec_new_sale(state: ContractState, env: Env, info: MessageInfo, id: str, price: int, tradable: bool): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action exec_new_sale_action = {
     // TODO: Change next line according to fund expectations
@@ -62,7 +70,11 @@ module oaksecurity_cosmwasm_ctf_08 {
     pure val message: ExecuteMsg = ExecuteMsg_NewSale({ id: message_id, price: message_price, tradable: message_tradable })
     execute_message(message, max_funds)
   }
-  pure def exec_buy(state: ContractState, _env: Env, info: MessageInfo, id: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def exec_buy(state: ContractState, _env: Env, info: MessageInfo, id: str): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action exec_buy_action = {
     // TODO: Change next line according to fund expectations
@@ -71,7 +83,11 @@ module oaksecurity_cosmwasm_ctf_08 {
     pure val message: ExecuteMsg = ExecuteMsg_BuyNFT({ id: message_id })
     execute_message(message, max_funds)
   }
-  pure def exec_cancel_sale(state: ContractState, info: MessageInfo, id: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def exec_cancel_sale(state: ContractState, info: MessageInfo, id: str): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action exec_cancel_sale_action = {
     // TODO: Change next line according to fund expectations
@@ -80,7 +96,11 @@ module oaksecurity_cosmwasm_ctf_08 {
     pure val message: ExecuteMsg = ExecuteMsg_CancelSale({ id: message_id })
     execute_message(message, max_funds)
   }
-  pure def exec_new_trade(state: ContractState, env: Env, info: MessageInfo, asked_id: str, offered_id: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def exec_new_trade(state: ContractState, env: Env, info: MessageInfo, asked_id: str, offered_id: str): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action exec_new_trade_action = {
     // TODO: Change next line according to fund expectations
@@ -90,7 +110,11 @@ module oaksecurity_cosmwasm_ctf_08 {
     pure val message: ExecuteMsg = ExecuteMsg_NewTrade({ target: message_target, offered: message_offered })
     execute_message(message, max_funds)
   }
-  pure def exec_accept_trade(state: ContractState, info: MessageInfo, asked_id: str, trader: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def exec_accept_trade(state: ContractState, info: MessageInfo, asked_id: str, trader: str): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action exec_accept_trade_action = {
     // TODO: Change next line according to fund expectations
@@ -100,7 +124,11 @@ module oaksecurity_cosmwasm_ctf_08 {
     pure val message: ExecuteMsg = ExecuteMsg_AcceptTrade({ id: message_id, trader: message_trader })
     execute_message(message, max_funds)
   }
-  pure def exec_cancel_trade(state: ContractState, info: MessageInfo, asked_id: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def exec_cancel_trade(state: ContractState, info: MessageInfo, asked_id: str): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action exec_cancel_trade_action = {
     // TODO: Change next line according to fund expectations
@@ -109,20 +137,24 @@ module oaksecurity_cosmwasm_ctf_08 {
     pure val message: ExecuteMsg = ExecuteMsg_CancelTrade({ id: message_id })
     execute_message(message, max_funds)
   }
-  pure def reply(state: ContractState, _env: Env, reply: Reply): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def reply(state: ContractState, _env: Env, reply: Reply): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure val DENOM = "uawesome"
   pure val TRADE_REPLY = 1
   pure val SALE_REPLY = 2
 
   type ContractState = {
     config: Config,
-  sales: str -> Sale,
-  trades: str -> Trade,
-  operations: Operations
+    sales: str -> Sale,
+    trades: str -> Trade,
+    operations: Operations
   }
 
   pure val init_contract_state = {
-        config: { nft_contract: "s1" },
+    config: { nft_contract: "s1" },
     sales: Map(),
     trades: Map(),
     operations: { n_trades: 0,n_sales: 0 }
@@ -310,10 +342,24 @@ pub mod state_structs {
     
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
 
     #[derive(Clone, Debug, Deserialize)]
     pub struct Response {
         pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -332,7 +378,7 @@ pub mod state_structs {
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_08::contract;
-    use oaksecurity_cosmwasm_ctf_08::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+    use oaksecurity_cosmwasm_ctf_08::msg::{ExecuteMsg, InstantiateMsg};
 
 
     use crate::state_structs::*;
@@ -447,6 +493,7 @@ pub mod tests {
             let sender = nondet_picks.sender.clone();
 
             println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
 
             match action_taken.as_str() {
 

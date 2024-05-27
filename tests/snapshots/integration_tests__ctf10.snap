@@ -34,11 +34,19 @@ module oaksecurity_cosmwasm_ctf_10 {
   type Whitelist = { users: List[str] }
   type ExecuteMsg =
     | ExecuteMsg_Mint
-  pure def instantiate(state: ContractState, env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_Mint(__r) => mint(state, env, info)
   }
-  pure def mint(state: ContractState, _env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def mint(state: ContractState, _env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action mint_action = {
     // TODO: Change next line according to fund expectations
@@ -47,16 +55,20 @@ module oaksecurity_cosmwasm_ctf_10 {
     pure val message: ExecuteMsg = ExecuteMsg_Mint
     execute_message(message, max_funds)
   }
-  pure def reply(state: ContractState, _env: Env, reply: Reply): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def reply(state: ContractState, _env: Env, reply: Reply): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure val DENOM = "uawesome"
 
   type ContractState = {
     config: Config,
-  whitelist: Whitelist
+    whitelist: Whitelist
   }
 
   pure val init_contract_state = {
-        config: { nft_contract: "s1",mint_per_user: 0,total_tokens: 0 },
+    config: { nft_contract: "s1",mint_per_user: 0,total_tokens: 0 },
     whitelist: { users: [] }
   }
 
@@ -188,10 +200,24 @@ pub mod state_structs {
     
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
 
     #[derive(Clone, Debug, Deserialize)]
     pub struct Response {
         pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -210,7 +236,7 @@ pub mod state_structs {
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_10::contract;
-    use oaksecurity_cosmwasm_ctf_10::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+    use oaksecurity_cosmwasm_ctf_10::msg::{ExecuteMsg, InstantiateMsg};
 
 
     use crate::state_structs::*;
@@ -325,6 +351,7 @@ pub mod tests {
             let sender = nondet_picks.sender.clone();
 
             println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
 
             match action_taken.as_str() {
 

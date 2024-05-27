@@ -161,29 +161,21 @@ pub fn post_items(ctx: &Context) -> String {
         .iter()
         .map(|x| format!("{}: {}", x.0, x.1))
         .collect_vec()
-        .join(",\n  ");
+        .join(",\n    ");
 
     // After all items were visited, we can produce the complete contract state initializer
     let initializer = ctx
         .contract_state
         .iter()
-        .map(|field| {
-            format!(
-                "    {}: {}",
-                field.0,
-                init_value_for_type(ctx, field.1.clone())
-            )
-        })
+        .map(|field| format!("{}: {}", field.0, init_value_for_type(ctx, field.1.clone())))
         .collect_vec()
-        .join(",\n");
+        .join(",\n    ");
 
     let special_actions = ["execute", "instantiate", "reply"];
     let reply = if !ctx.ops_with_mutability.contains(&"reply".to_string()) {
         // Generate default reply to be given for the message handler
         "
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 "
     } else {
         "\n"

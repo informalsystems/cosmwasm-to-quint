@@ -35,12 +35,20 @@ module oaksecurity_cosmwasm_ctf_04 {
   type ExecuteMsg =
     | ExecuteMsg_Mint
     | ExecuteMsg_Burn({ shares: int })
-  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_Mint(__r) => mint(state, env, info)
     | ExecuteMsg_Burn(__r) => burn(state, env, info, __r.shares)
   }
-  pure def mint(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def mint(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action mint_action = {
     // TODO: Change next line according to fund expectations
@@ -49,7 +57,11 @@ module oaksecurity_cosmwasm_ctf_04 {
     pure val message: ExecuteMsg = ExecuteMsg_Mint
     execute_message(message, max_funds)
   }
-  pure def burn(state: ContractState, env: Env, info: MessageInfo, shares: int): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def burn(state: ContractState, env: Env, info: MessageInfo, shares: int): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action burn_action = {
     // TODO: Change next line according to fund expectations
@@ -62,11 +74,11 @@ module oaksecurity_cosmwasm_ctf_04 {
 
   type ContractState = {
     config: Config,
-  balances: Addr -> Balance
+    balances: Addr -> Balance
   }
 
   pure val init_contract_state = {
-        config: { total_supply: 0 },
+    config: { total_supply: 0 },
     balances: Map()
   }
 
@@ -78,9 +90,7 @@ module oaksecurity_cosmwasm_ctf_04 {
     advance_time,
   }
 
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
@@ -201,10 +211,24 @@ pub mod state_structs {
     
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
 
     #[derive(Clone, Debug, Deserialize)]
     pub struct Response {
         pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -223,7 +247,7 @@ pub mod state_structs {
 #[cfg(test)]
 pub mod tests {
     use oaksecurity_cosmwasm_ctf_04::contract;
-    use oaksecurity_cosmwasm_ctf_04::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+    use oaksecurity_cosmwasm_ctf_04::msg::{ExecuteMsg, InstantiateMsg};
 
 
     use crate::state_structs::*;
@@ -338,6 +362,7 @@ pub mod tests {
             let sender = nondet_picks.sender.clone();
 
             println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
 
             match action_taken.as_str() {
 

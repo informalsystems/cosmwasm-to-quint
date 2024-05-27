@@ -27,7 +27,11 @@ module flash_loan {
   pure val MAX_AMOUNT = 200
 
 
-  pure def instantiate(state: ContractState, _env: Env, info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_FlashLoan(__r) => flash_loan(state, env, info)
     | ExecuteMsg_SettleLoan(__r) => settle_loan(state, env, info)
@@ -35,7 +39,11 @@ module flash_loan {
     | ExecuteMsg_WithdrawFunds(__r) => withdraw_funds(state, env, info, __r.recipient)
     | ExecuteMsg_TransferOwner(__r) => transfer_owner(state, info, __r.new_owner)
   }
-  pure def flash_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def flash_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action flash_loan_action = {
     // TODO: Change next line according to fund expectations
@@ -44,7 +52,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForflash_loan
     execute_message(message, max_funds)
   }
-  pure def settle_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def settle_loan(state: ContractState, env: Env, info: MessageInfo): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action settle_loan_action = {
     // TODO: Change next line according to fund expectations
@@ -53,7 +65,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForsettle_loan
     execute_message(message, max_funds)
   }
-  pure def set_proxy_addr(state: ContractState, info: MessageInfo, proxy_addr: str): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def set_proxy_addr(state: ContractState, info: MessageInfo, proxy_addr: str): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action set_proxy_addr_action = {
     // TODO: Change next line according to fund expectations
@@ -62,7 +78,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForset_proxy_addr
     execute_message(message, max_funds)
   }
-  pure def withdraw_funds(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def withdraw_funds(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action withdraw_funds_action = {
     // TODO: Change next line according to fund expectations
@@ -71,7 +91,11 @@ module flash_loan {
     pure val message: UnknownType = ConstructorForwithdraw_funds
     execute_message(message, max_funds)
   }
-  pure def transfer_owner(state: ContractState, info: MessageInfo, new_owner: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def transfer_owner(state: ContractState, info: MessageInfo, new_owner: Addr): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action transfer_owner_action = {
     // TODO: Change next line according to fund expectations
@@ -85,11 +109,11 @@ module flash_loan {
 
   type ContractState = {
     config: Config,
-  flash_loan: FlashLoanState
+    flash_loan: FlashLoanState
   }
 
   pure val init_contract_state = {
-        config: <missing-type>,
+    config: <missing-type>,
     flash_loan: <missing-type>
   }
 
@@ -104,9 +128,7 @@ module flash_loan {
     advance_time,
   }
 
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
@@ -205,11 +227,19 @@ module mock_arb {
   pure val MAX_AMOUNT = 200
 
 
-  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, _msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_Arbitrage(__r) => arbitrage(state, env, info, __r.recipient)
   }
-  pure def arbitrage(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def arbitrage(state: ContractState, env: Env, info: MessageInfo, recipient: Addr): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action arbitrage_action = {
     // TODO: Change next line according to fund expectations
@@ -225,7 +255,7 @@ module mock_arb {
   }
 
   pure val init_contract_state = {
-        config: <missing-type>
+    config: <missing-type>
   }
 
   action execute_step = all {
@@ -235,9 +265,7 @@ module mock_arb {
     advance_time,
   }
 
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
@@ -334,11 +362,19 @@ module proxy {
   pure val MAX_AMOUNT = 200
 
 
-  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+  pure def instantiate(state: ContractState, _env: Env, _info: MessageInfo, msg: InstantiateMsg): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
+
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_RequestFlashLoan(__r) => request_flash_loan(state, env, info, __r.recipient, __r.msg)
   }
-  pure def request_flash_loan(state: ContractState, env: Env, _info: MessageInfo, recipient: Addr, msg: Binary): (Result[Response, ContractError], ContractState) = (Ok(Response_new), state)
+
+  pure def request_flash_loan(state: ContractState, env: Env, _info: MessageInfo, recipient: Addr, msg: Binary): (Result[Response, ContractError], ContractState) = {
+    // TODO: Update body
+    (Ok(Response_new), state)
+  }
                             
   action request_flash_loan_action = {
     // TODO: Change next line according to fund expectations
@@ -354,7 +390,7 @@ module proxy {
   }
 
   pure val init_contract_state = {
-        config: <missing-type>
+    config: <missing-type>
   }
 
   action execute_step = all {
@@ -364,9 +400,7 @@ module proxy {
     advance_time,
   }
 
-
   pure def reply(state: ContractState, _env: Env, _reply: Reply): (Result, ContractState) = (Ok(Response_new), state)
-
 
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
@@ -470,10 +504,24 @@ pub mod state_structs {
     
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
 
     #[derive(Clone, Debug, Deserialize)]
     pub struct Response {
         pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -492,7 +540,7 @@ pub mod state_structs {
 #[cfg(test)]
 pub mod tests {
     use flash_loan::contract;
-    use flash_loan::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+    use flash_loan::msg::{ExecuteMsg, InstantiateMsg};
 
 
     use crate::state_structs::*;
@@ -607,6 +655,7 @@ pub mod tests {
             let sender = nondet_picks.sender.clone();
 
             println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
 
             match action_taken.as_str() {
 
@@ -789,10 +838,24 @@ pub mod state_structs {
     
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
 
     #[derive(Clone, Debug, Deserialize)]
     pub struct Response {
         pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -811,7 +874,7 @@ pub mod state_structs {
 #[cfg(test)]
 pub mod tests {
     use mock_arb::contract;
-    use mock_arb::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+    use mock_arb::msg::{ExecuteMsg, InstantiateMsg};
 
 
     use crate::state_structs::*;
@@ -926,6 +989,7 @@ pub mod tests {
             let sender = nondet_picks.sender.clone();
 
             println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
 
             match action_taken.as_str() {
 
@@ -1028,10 +1092,24 @@ pub mod state_structs {
     
     #[derive(Clone, Debug, Deserialize)]
     pub struct Message {}
+    #[derive(Clone, Debug, Deserialize)]
+    pub struct Attribute {
+        pub key: String,
+        pub value: QuintSerializedValue,
+    }
+
+    #[derive(Clone, Debug, Deserialize)]
+    #[serde(tag = "tag", content = "value")]
+    pub enum QuintSerializedValue {
+        FromInt(BigInt),
+        FromStr(String),
+        FromListInt(Vec<BigInt>),
+    }
 
     #[derive(Clone, Debug, Deserialize)]
     pub struct Response {
         pub messages: Vec<Message>,
+        pub attributes: Vec<Attribute>,
     }
 
     #[derive(Clone, Debug, Deserialize)]
@@ -1050,7 +1128,7 @@ pub mod state_structs {
 #[cfg(test)]
 pub mod tests {
     use proxy::contract;
-    use proxy::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+    use proxy::msg::{ExecuteMsg, InstantiateMsg};
 
 
     use crate::state_structs::*;
@@ -1165,6 +1243,7 @@ pub mod tests {
             let sender = nondet_picks.sender.clone();
 
             println!("Step number: {:?}", s.meta.index);
+            println!("Result from trace: {:?}", s.value.result.clone());
 
             match action_taken.as_str() {
 

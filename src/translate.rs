@@ -534,18 +534,20 @@ impl Translatable for rustc_hir::Item<'_> {
                 if name == "instantiate" || name == "reply" {
                     // instantiate explanation:
                     //
-                    // FIXME: We need to do something about instantiate
-                    // Instantiate is a stateful function (taking state as an
-                    // argument and returning it) But currently we don't call it
-                    // in the state machine (from `step`). We probably need to
-                    // update the boilerplate stuff to call it.
+                    // Instantiate is a special def that will be called on init
                     //
                     // reply explanation:
                     //
                     // Reply is a special def that will be called when
                     // processing a message with a compatible reply_on field. We
                     // don't want to generate a nondet action for it.
-                    return format!("  pure def {name}{sig} = ({body_value}, state)");
+                    return format!(
+                        "  pure def {name}{sig} = {{
+    // TODO: Update body
+    ({body_value}, state)
+  }}
+"
+                    );
                 }
 
                 let ctor: Constructor = ctx
@@ -557,7 +559,11 @@ impl Translatable for rustc_hir::Item<'_> {
                 let nondet_value = ctor.nondet_definition(ctx, "message");
 
                 format!(
-                    "  pure def {name}{sig} = ({body_value}, state)
+                    "
+  pure def {name}{sig} = {{
+    // TODO: Update body
+    ({body_value}, state)
+  }}
                             
   action {name}_action = {{
     // TODO: Change next line according to fund expectations
