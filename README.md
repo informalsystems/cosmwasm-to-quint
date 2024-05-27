@@ -1,4 +1,7 @@
-# CosmWasm to Quint
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./images/cosmwasm-to-quint-light.png">
+  <img alt="CoswmWasm to Quint" src="./images/cosmwasm-to-quint-dark.png" width=700>
+</picture>
 
 *Semi-automated modelling and Model-Based Testing for CosmWasm contracts.*
 1. Generate [Quint](https://github.com/informalsystems/quint) model stubs for a
