@@ -19,7 +19,7 @@ understanding of how this whole process works, take at look at our [AwesomWasm
 2024 Workshop
 material](https://github.com/informalsystems/quint_awesomwasm24_workshop).
 
-## Is this ready for me to use?
+## Is this ready to be used?
 
 Yes!
 
@@ -54,25 +54,30 @@ cargo install --path .
 ### Setup
 
 Running this tool for a CosmWasm contracts requires a simple `cargo` command,
-but you need to set some things up first. Make sure you are on the directory of
-your CosmWasm project and follow these steps:
+but you need to set some things up first.
 
-1. Setup `rustup` to use a `nightly` version compatible with compiler plugin
-   libraries, and add the necessary components and target.
+1. Go to the directory of your CosmWasm project
 
 ``` bash
+cd /path/to/my-cosmwasm-project
+```
+
+2. Setup `rustup` to use a `nightly` version compatible with compiler plugin
+libraries, and add the necessary components and target. **Important**: You also
+need to update your project dependencies (`cargo update`) to match the new tool
+chain, otherwise compilation will likely fail:
+
+``` bash
+# Install and use a nightly version
 rustup toolchain add nightly-2024-01-06
 rustup override set nightly-2024-01-06
+# Add components and target
 rustup component add clippy rust-src rustc-dev llvm-tools-preview
 rustup target add wasm32-unknown-unknown
-```
-
-2. **Important**: Update your project dependencies to match the new tool chain,
-   otherwise compilation will likely fail
-
-``` bash
+# Update dependencies on Cargo.lock to match the new tool chain
 cargo update
 ```
+
 
 ### Generating the files
 
@@ -99,8 +104,11 @@ cargo add num-traits@0.2.17 --dev
 2. The tests also require a trace. By default, it will look for the
    `quint/test.itf.json` file, but you can change this path in the test file.
    The trace is some execution from the Quint model, which the test will attempt
-   to reproduce in your contract. There are a number of ways to obtain a trace,
-   but the simplest one is:
+   to reproduce in your contract. You should always use the `--mbt` flag to tell
+   Quint to include test-relevant information to the trace (this option is
+   available from Quint `v0.20.0`).
+
+There are a number of ways to obtain a trace, but the simplest one is:
 
 ``` bash
 quint run quint/my_model.qnt --mbt --out-itf=quint/test.itf.json
@@ -120,13 +128,14 @@ Alice spends all of her ATOMs. You can write an invariant like
 violating that invariant.
 
 ## Known limitations
-- Imports: this is something we want to support, but it is not trivial. Right
-  now, if your contract crate imports core data structures or other items that
-  are necessary for the generation, you'll have unresolved names and
-  placeholders to fill for each of them. Of course, this doesn't apply to common
-  imports from `cosmwasm_std` which are already dealt with.
-- Multiple contract interactions: this is probably the next important step for
-  this project, but we are not there yet. If you need to model and test
+- **Imports from different crates**: this is something we want to support, but
+  it is not trivial. Right now, if your contract crate imports core data
+  structures or other items that are necessary for the generation, you'll have
+  unresolved names and placeholders to fill for each of them. Of course, this
+  doesn't apply to common imports from `cosmwasm_std` which are already dealt
+  with.
+- **Multiple contract interactions**: this is probably the next important step
+  for this project, but we are not there yet. If you need to model and test
   interactions between multiple contracts, you will need to do a lot of the
   wiring manually. Fortunately, we believe it is possible to automate this, so
   let us know if this would be useful for your project!
