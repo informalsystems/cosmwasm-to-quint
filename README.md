@@ -45,6 +45,9 @@ challenges](https://github.com/oak-security/cosmwasm-ctf) as tests, and these
 snapshots contain both the model stubs and rust tests generated for each Capture
 the Flag (CTF) challenge.
 
+For a more detailed example, checkout this [walk-through](https://github.com/informalsystems/quint_awesomwasm24_workshop/blob/main/walkthrough.md)
+of the entire process, from git clone to reproducing the bug, for CTF-01.
+
 ## Setup and generation
 
 This project is implemented as a rust compiler plugin, in order to easily access
