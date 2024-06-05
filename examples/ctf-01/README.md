@@ -2,7 +2,11 @@
 
 This is a walk-through on how we can find the bug in the CTF 01 contract using
 [Quint](https://github.com/informalsystems/quint) with
-[cosmwasm-to-quint](https://github.com/informalsystems/cosmwasm-to-quint).
+[cosmwasm-to-quint](https://github.com/informalsystems/cosmwasm-to-quint). See
+[quint/oaksecurity_cosmwasm_ctf_01_stubs.qnt](./quint/oaksecurity_cosmwasm_ctf_01_stubs.qnt)
+for the final model and
+[tests/mbt_oaksecurity_cosmwasm_ctf_01.rs](./tests/mbt_oaksecurity_cosmwasm_ctf_01.rs)
+for a generated test example.
 
 ## 1. Setup
 
