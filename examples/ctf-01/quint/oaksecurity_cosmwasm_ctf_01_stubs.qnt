@@ -1,3 +1,4 @@
+// -*- mode: Bluespec; -*-
 module oaksecurity_cosmwasm_ctf_01 {
   
   import basicSpells.* from "./lib/basicSpells"
