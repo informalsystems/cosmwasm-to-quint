@@ -29,7 +29,7 @@ impl Translatable for rustc_middle::ty::Ty<'_> {
         // The following regex replacement has the goal of transforming it into type<type_arg>
         let re = Regex::new(r"(\w+::)*(\w+)(<(\w+::)*(\w+)>)?").unwrap();
         let name = re.replace(name_core.as_str(), |caps: &regex::Captures| {
-            if let Some(m) = caps.get(4) {
+            if let Some(m) = caps.get(5) {
                 format!("{}[{}]", &caps[2], m.as_str())
             } else {
                 caps[2].to_string()
