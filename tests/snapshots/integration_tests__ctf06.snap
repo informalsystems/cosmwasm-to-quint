@@ -110,8 +110,8 @@ module oaksecurity_cosmwasm_ctf_06 {
   }
 
   pure val init_contract_state = {
-    config: { voting_window: 0,voting_token: "s1",owner: "s1" },
-    proposal: { proposer: "s1",timestamp: 0 }
+    config: { voting_window: 0, voting_token: "s1", owner: "s1" },
+    proposal: { proposer: "s1", timestamp: 0 }
   }
 
   action execute_step = all {
@@ -141,7 +141,7 @@ module oaksecurity_cosmwasm_ctf_06 {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = { token: "",owner: "",window: 0 }
+    pure val message: InstantiateMsg = { token: "", owner: "", window: 0 }
     pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {

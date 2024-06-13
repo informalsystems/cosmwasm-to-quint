@@ -157,7 +157,7 @@ module oaksecurity_cosmwasm_ctf_08 {
     config: { nft_contract: "s1" },
     sales: Map(),
     trades: Map(),
-    operations: { n_trades: 0,n_sales: 0 }
+    operations: { n_trades: 0, n_sales: 0 }
   }
 
   action execute_step = all {

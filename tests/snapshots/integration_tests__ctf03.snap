@@ -113,8 +113,8 @@ module flash_loan {
   }
 
   pure val init_contract_state = {
-    config: <missing-type>,
-    flash_loan: <missing-type>
+    config: "<missing-value>",
+    flash_loan: "<missing-value>"
   }
 
   action execute_step = all {
@@ -145,7 +145,7 @@ module flash_loan {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = <missing-type>
+    pure val message: InstantiateMsg = "<missing-value>"
     pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {
@@ -255,7 +255,7 @@ module mock_arb {
   }
 
   pure val init_contract_state = {
-    config: <missing-type>
+    config: "<missing-value>"
   }
 
   action execute_step = all {
@@ -282,7 +282,7 @@ module mock_arb {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = <missing-type>
+    pure val message: InstantiateMsg = "<missing-value>"
     pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {
@@ -390,7 +390,7 @@ module proxy {
   }
 
   pure val init_contract_state = {
-    config: <missing-type>
+    config: "<missing-value>"
   }
 
   action execute_step = all {
@@ -417,7 +417,7 @@ module proxy {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = <missing-type>
+    pure val message: InstantiateMsg = "<missing-value>"
     pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {

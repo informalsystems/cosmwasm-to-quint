@@ -109,7 +109,7 @@ module oaksecurity_cosmwasm_ctf_09 {
   }
 
   pure val init_contract_state = {
-    state: { owner: "s1",total_staked: 0,global_index: 0 },
+    state: { owner: "s1", total_staked: 0, global_index: 0 },
     users: Map()
   }
 

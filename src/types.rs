@@ -46,6 +46,7 @@ pub struct Context<'tcx, 'c> {
     pub record_fields: Vec<String>,
     pub struct_fields: Vec<Field>,
     pub pat_fields: Vec<String>,
+    pub generics: Vec<String>,
     pub current_item_name: String,
 }
 

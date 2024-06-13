@@ -161,6 +161,7 @@ fn translate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) 
         record_fields: vec![],
         struct_fields: vec![],
         pat_fields: vec![],
+        generics: vec![],
         current_item_name: "".to_string(),
     };
 

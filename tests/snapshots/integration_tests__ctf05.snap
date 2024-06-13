@@ -138,7 +138,7 @@ module oaksecurity_cosmwasm_ctf_05 {
   }
 
   pure val init_contract_state = {
-    state: { current_owner: "s1",proposed_owner: <missing-type> },
+    state: { current_owner: "s1", proposed_owner: "<missing-value>" },
     balances: Map()
   }
 

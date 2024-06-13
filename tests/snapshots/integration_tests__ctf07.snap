@@ -142,7 +142,7 @@ module oaksecurity_cosmwasm_ctf_07 {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = { owner: "",threshold: 0 }
+    pure val message: InstantiateMsg = { owner: "", threshold: 0 }
     pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {

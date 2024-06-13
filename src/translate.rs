@@ -29,13 +29,15 @@ pub fn missing_translation<T: Translatable + Debug>(item: T, descr: &str) -> Str
 }
 
 impl Translatable for Ident {
-    fn translate(&self, _ctx: &mut Context) -> String {
+    fn translate(&self, ctx: &mut Context) -> String {
         const QUINT_KEYWORDS: [&str; 31] = [
             "Set", "List", "Rec", "Tup", "not", "and", "or", "iff", "implies", "all", "any", "if",
             "else", "module", "import", "from", "export", "as", "const", "var", "def", "val",
             "pure", "nondet", "action", "temporal", "assume", "type", "Bool", "Int", "Nat",
         ];
         let name_with_underscore = format!("{}_", self);
+        let lowercase_name = self.as_str().to_lowercase();
+
         let translated_str = match self.as_str() {
             "Vec" => "List",
             "String" => "str",
@@ -49,6 +51,7 @@ impl Translatable for Ident {
             "deps" => "state",
             "_deps" => "state",
             s if QUINT_KEYWORDS.contains(&s) => name_with_underscore.as_str(),
+            s if ctx.generics.contains(&s.to_string()) => lowercase_name.as_str(),
             s => s,
         };
 
@@ -496,6 +499,34 @@ impl Translatable for Function<'_> {
     }
 }
 
+impl Translatable for rustc_hir::GenericParam<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        match self.name {
+            rustc_hir::ParamName::Plain(ident) => {
+                let name = ident.translate(ctx);
+                if name.starts_with('\'') {
+                    // Lifetime, ignore it
+                    return "".to_string();
+                }
+                ctx.generics.push(name.clone());
+                name.to_lowercase()
+            }
+            _ => "".to_string(),
+        }
+    }
+}
+
+impl Translatable for rustc_hir::Generics<'_> {
+    fn translate(&self, ctx: &mut Context) -> String {
+        let type_args = translate_list(self.params, ctx, ", ");
+        if type_args.is_empty() {
+            "".to_string()
+        } else {
+            format!("[{type_args}]")
+        }
+    }
+}
+
 impl Translatable for rustc_hir::Item<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         let name = self.ident.as_str();
@@ -599,24 +630,31 @@ impl Translatable for rustc_hir::Item<'_> {
   }}"
                 )
             }
-            rustc_hir::ItemKind::Struct(variant_data, _generics) => {
+            rustc_hir::ItemKind::Struct(variant_data, generics) => {
+                let type_args = generics.translate(ctx);
                 let translated_fields = variant_data.translate(ctx);
                 let fields = ctx.struct_fields.clone();
                 ctx.struct_fields.clear();
+                ctx.generics.clear();
 
                 ctx.structs.insert(name.to_string(), fields);
 
-                format!("  type {name} = {translated_fields}")
+                format!("  type {name}{type_args} = {translated_fields}")
             }
 
-            rustc_hir::ItemKind::Enum(enum_def, _generics) => {
-                format!("  type {name} =\n{}", enum_def.translate(ctx))
+            rustc_hir::ItemKind::Enum(enum_def, generics) => {
+                let type_args = generics.translate(ctx);
+                let enum_variants = enum_def.translate(ctx);
+                ctx.generics.clear();
+                format!("  type {name}{type_args} =\n{enum_variants}",)
             }
-            rustc_hir::ItemKind::TyAlias(ty, _generics) => {
+            rustc_hir::ItemKind::TyAlias(ty, generics) => {
+                let type_args = generics.translate(ctx);
                 let translated_type = ty.translate(ctx);
                 ctx.type_aliases
                     .insert(name.to_string(), translated_type.clone());
-                format!("  type {name} = {translated_type}")
+                ctx.generics.clear();
+                format!("  type {name}{type_args} = {translated_type}")
             }
             // FIXME: We should translate this (at least Use) into imports.
             // This is only necessary for crates that import things from other crates

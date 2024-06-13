@@ -68,7 +68,7 @@ module oaksecurity_cosmwasm_ctf_10 {
   }
 
   pure val init_contract_state = {
-    config: { nft_contract: "s1",mint_per_user: 0,total_tokens: 0 },
+    config: { nft_contract: "s1", mint_per_user: 0, total_tokens: 0 },
     whitelist: { users: [] }
   }
 
@@ -95,7 +95,7 @@ module oaksecurity_cosmwasm_ctf_10 {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = { cw721_code_id: 0,mint_per_user: 0,whitelisted_users: [] }
+    pure val message: InstantiateMsg = { cw721_code_id: 0, mint_per_user: 0, whitelisted_users: [] }
     pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {
