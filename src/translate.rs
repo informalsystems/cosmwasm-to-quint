@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
 use itertools::Itertools;
 use rustc_span::symbol::Ident;
@@ -18,6 +18,7 @@ pub fn translate_list<T: Translatable>(items: &[T], ctx: &mut Context, sep: &str
     items
         .iter()
         .map(|x| x.translate(ctx))
+        .filter(|x| !x.is_empty())
         .collect_vec()
         .join(sep)
 }
@@ -29,30 +30,29 @@ pub fn missing_translation<T: Translatable + Debug>(item: T, descr: &str) -> Str
 
 impl Translatable for Ident {
     fn translate(&self, _ctx: &mut Context) -> String {
-        // FIXME: this should be a map
-        let translated_segments: &HashMap<&str, &str> = &HashMap::from([
-            ("Vec", "List"),
-            ("String", "str"),
-            ("Uint128", "int"),
-            ("Uint64", "int"),
-            ("Uint32", "int"),
-            ("u128", "int"),
-            ("u64", "int"),
-            ("u32", "int"),
-            ("i128", "int"),
-            ("i64", "int"),
-            ("i32", "int"),
-            ("Decimal", "int"),
-            ("Timestamp", "int"),
-            ("DepsMut", "ContractStateMut"), // Not an actual translation, but a placeholder
-            ("Deps", "ContractState"),
-            ("Ok", "Ok"),
-            ("deps", "state"),
-            ("_deps", "state"),
-        ]);
+        const QUINT_KEYWORDS: [&str; 31] = [
+            "Set", "List", "Rec", "Tup", "not", "and", "or", "iff", "implies", "all", "any", "if",
+            "else", "module", "import", "from", "export", "as", "const", "var", "def", "val",
+            "pure", "nondet", "action", "temporal", "assume", "type", "Bool", "Int", "Nat",
+        ];
+        let name_with_underscore = format!("{}_", self);
+        let translated_str = match self.as_str() {
+            "Vec" => "List",
+            "String" => "str",
+            "Uint128" | "Uint64" | "Uint32" | "u128" | "u64" | "u32" | "i128" | "i64" | "i32" => {
+                "int"
+            }
+            "Decimal" => "int",
+            "Timestamp" => "int",
+            "Deps" => "ContractState",
+            "DepsMut" => "ContractStateMut", // Not an actual translation, but a placeholder
+            "deps" => "state",
+            "_deps" => "state",
+            s if QUINT_KEYWORDS.contains(&s) => name_with_underscore.as_str(),
+            s => s,
+        };
 
-        let s = self.as_str();
-        translated_segments.get(s).unwrap_or(&s).to_string()
+        translated_str.to_string()
     }
 }
 
@@ -82,6 +82,8 @@ impl Translatable for rustc_hir::QPath<'_> {
             rustc_hir::QPath::TypeRelative(ty, segment) => {
                 format!("{}_{}", ty.translate(ctx), segment.translate(ctx))
             }
+            // Question mark operator, remove them for now
+            rustc_hir::QPath::LangItem(rustc_hir::LangItem::TryTraitBranch, _) => "".to_string(),
             _ => missing_translation(*self, "qualified-path"),
         }
     }
@@ -109,7 +111,19 @@ impl Translatable for rustc_hir::Ty<'_> {
                 );
                 t
             }
-            _ => missing_translation(*self, "type"),
+            rustc_hir::TyKind::TraitObject(_refs, _, _) => {
+                // Getting trait identifier (not very useful in Quint):
+                // refs[0].trait_ref.path.segments[0].ident.translate(ctx)
+
+                // There's no dynamic dispatch in Quint, so the best we can do
+                // is to have a special string argument to identify a behavior
+                // and then have the implementation depend on it
+                "TraitObject".to_string()
+            }
+            _ => {
+                eprintln!("No translation for type: {:#?}", *self);
+                "MissingType".to_string()
+            }
         }
     }
 }
@@ -125,7 +139,7 @@ impl Translatable for rustc_hir::Param<'_> {
 impl Translatable for rustc_hir::Pat<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         match self.kind {
-            rustc_hir::PatKind::Binding(_a, _id, name, _n) => name.as_str().to_string(),
+            rustc_hir::PatKind::Binding(_a, _id, name, _n) => name.translate(ctx),
             rustc_hir::PatKind::Path(qpath) => qpath.translate(ctx),
             rustc_hir::PatKind::Struct(qpath, pat_fields, _) => {
                 // TODO: raise error if pat != field (I think this is matching for {field_ident: field_pat})
@@ -133,7 +147,7 @@ impl Translatable for rustc_hir::Pat<'_> {
 
                 let fields = pat_fields
                     .iter()
-                    .map(|field| field.ident.to_string())
+                    .map(|field| field.ident.translate(ctx))
                     .collect_vec();
                 ctx.pat_fields.extend(fields.clone());
 
@@ -236,10 +250,10 @@ impl Translatable for rustc_hir::Expr<'_> {
             rustc_hir::ExprKind::Tup(exprs) => format!("({})", translate_list(exprs, ctx, ", ")),
             rustc_hir::ExprKind::Struct(_, expr_fields, base) => {
                 let translated_base = base
-                    .map(|e| format!("... {}", e.translate(ctx)))
+                    .map(|e| format!("... {},", e.translate(ctx)))
                     .unwrap_or("".to_string());
                 let record_fields = translate_list(expr_fields, ctx, ", ");
-                format!("{{ {} }}", [translated_base, record_fields].join(", "))
+                format!("{{ {} }}", [translated_base, record_fields].join(""))
             }
             rustc_hir::ExprKind::Block(block, _label) => match block.expr {
                 Some(expr) => expr.translate(ctx),
@@ -331,7 +345,7 @@ impl Translatable for rustc_hir::VariantData<'_> {
                 let translated_fields = fields
                     .iter()
                     .map(|field| {
-                        let field_ident = field.ident.to_string();
+                        let field_ident = field.ident.translate(ctx);
                         Field {
                             name: field_ident.clone(),
                             ty: field.ty.translate(ctx),
@@ -390,6 +404,13 @@ impl Translatable for rustc_hir::EnumDef<'_> {
         if self.variants.is_empty() {
             return "{}".to_string();
         }
+        ctx.enums.insert(
+            ctx.current_item_name.to_string(),
+            self.variants
+                .iter()
+                .map(|x| x.ident.to_string())
+                .collect_vec(),
+        );
 
         translate_list(self.variants, ctx, "\n")
     }
@@ -457,6 +478,11 @@ impl Translatable for Function<'_> {
 
         if output == "void" {
             // No point translating functions that don't return, since quint doesn't have side effects
+            return "".to_string();
+        }
+
+        if output.starts_with("IndexedMap") || output.starts_with("MultiIndex") {
+            // These won't be useful in the Quint model, ignore them
             return "".to_string();
         }
 
@@ -587,7 +613,10 @@ impl Translatable for rustc_hir::Item<'_> {
                 format!("  type {name} =\n{}", enum_def.translate(ctx))
             }
             rustc_hir::ItemKind::TyAlias(ty, _generics) => {
-                format!("  type {name} = {}", ty.translate(ctx))
+                let translated_type = ty.translate(ctx);
+                ctx.type_aliases
+                    .insert(name.to_string(), translated_type.clone());
+                format!("  type {name} = {translated_type}")
             }
             // FIXME: We should translate this (at least Use) into imports.
             // This is only necessary for crates that import things from other crates

@@ -69,7 +69,7 @@ fn missing_nondet_value<T: NondetValue + Debug + Translatable>(
     kind: &str,
 ) -> String {
     eprintln!("No nondet value for {}: {:?}", kind, item.translate(ctx));
-    "<missing-nondet-value>".to_string()
+    "\"<missing-nondet-value>\"".to_string()
 }
 
 fn nondet_value_for_list(ty: &rustc_hir::Ty<'_>, ctx: &mut Context, ident: &str) -> NondetInfo {
@@ -185,6 +185,19 @@ impl NondetValue for rustc_hir::PathSegment<'_> {
         if ctx.structs.contains_key(&translated_type) {
             let fields = ctx.structs[&translated_type].clone();
             return fields.nondet_info(ctx, ident);
+        }
+
+        // If the type refers to an enum, get the first variant and generate a nondet value for it
+        if ctx.enums.contains_key(&translated_type) {
+            let variants = ctx.enums[&translated_type].clone();
+            let variant = variants[0].clone();
+            return self.nondet_info(ctx, variant.as_str());
+        }
+
+        // If the type refers to a type alias, generate a nondet value for the type alias
+        if ctx.type_aliases.contains_key(&translated_type) {
+            let alias = ctx.type_aliases[&translated_type].clone();
+            return self.nondet_info(ctx, alias.as_str());
         }
 
         // If the type refers to a primitive type, generate a nondet value for the primitive type

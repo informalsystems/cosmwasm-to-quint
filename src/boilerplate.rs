@@ -87,7 +87,7 @@ pub fn initializers(ctx: &Context) -> String {
         "
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
 
-  val env_val = {{ block: {{ time: time }} }}
+  val env_val = {{ block: {{ time: time, height: 1 }} }} // TODO: Add a height var if you need it
 
   action init = {{
     // TODO: Change next line according to fund expectations
@@ -100,7 +100,7 @@ pub fn initializers(ctx: &Context) -> String {
     val info = {{ sender: sender, funds: funds }}
 
     pure val message: InstantiateMsg = {}
-    pure val r = instantiate(init_contract_state, {{ block: {{ time: 0 }} }}, info, message)
+    pure val r = instantiate(init_contract_state, {{ block: {{ time: 0, height: 1 }} }}, info, message)
 
     all {{
       contract_state' = r._2,

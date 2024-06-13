@@ -38,6 +38,8 @@ pub struct Context<'tcx, 'c> {
     pub tcx: TyCtxt<'tcx>,
     pub contract_state: Vec<(String, String)>,
     pub nondet_picks: Vec<(String, String)>,
+    pub enums: HashMap<String, Vec<String>>,
+    pub type_aliases: HashMap<String, String>,
     // scoped
     // FIXME: This should be a stack to account for nested scopes.
     // No need to worry about nested scopes for stub generation.

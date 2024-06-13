@@ -65,7 +65,7 @@ module cw_types {
     gas_limit: None,
   }
 
-  pure def SubMsg_reply_on_sucess(msg: CosmosMsg, id: int): SubMsg = {
+  pure def SubMsg_reply_on_success(msg: CosmosMsg, id: int): SubMsg = {
     __reply_on(msg, id, ReplyOn_Success)
   }
 
@@ -133,7 +133,8 @@ module cw_types {
     querier: TODO,
   }
 
-  type Env = { block: { time: int /*, height: int */ } } // TODO
+  type BlockInfo = { time: int, height: int }
+  type Env = { block: BlockInfo }
 
   type Coin = {
     denom: str,
@@ -149,4 +150,16 @@ module cw_types {
     | FromStr(str)
     | FromInt(int)
     | FromListInt(List[int])
+
+  // These shouldn't be actually used, but they are here for completion
+  type MultiIndex[ik, t, pk] = ()
+  type IndexedMap[k, t i] = ()
+
+  type StdError = str
+  type StdResult[a] = Result[a, StdError]
+
+  // There's no dynamic dispatch in Quint, so the best we can do is to have a
+  // special string argument to identify a behavior and then have the
+  // implementation depend on it
+  type TraitObject = str
 }

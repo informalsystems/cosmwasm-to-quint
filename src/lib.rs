@@ -155,6 +155,8 @@ fn translate_items(tcx: TyCtxt, crate_name: &str, items: Vec<&rustc_hir::Item>) 
             ("denom".to_string(), "str".to_string()),
             ("amount".to_string(), "int".to_string()),
         ],
+        enums: HashMap::new(),
+        type_aliases: HashMap::new(),
         // scoped
         record_fields: vec![],
         struct_fields: vec![],
