@@ -109,7 +109,7 @@ module oaksecurity_cosmwasm_ctf_06 {
     proposal: Proposal
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     config: { voting_window: 0, voting_token: "s1", owner: "s1" },
     proposal: { proposer: "s1", timestamp: 0 }
   }

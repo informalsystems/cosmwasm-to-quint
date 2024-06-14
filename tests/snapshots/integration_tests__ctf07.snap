@@ -108,7 +108,7 @@ module oaksecurity_cosmwasm_ctf_07 {
     balances: Addr -> int
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     top_depositor: "s1",
     owner: "s1",
     threshold: 0,

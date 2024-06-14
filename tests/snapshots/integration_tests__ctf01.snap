@@ -78,7 +78,7 @@ module oaksecurity_cosmwasm_ctf_01 {
     lockups: int -> Lockup
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     last_id: 0,
     lockups: Map()
   }

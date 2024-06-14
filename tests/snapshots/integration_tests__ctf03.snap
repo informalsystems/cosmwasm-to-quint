@@ -112,7 +112,7 @@ module flash_loan {
     flash_loan: FlashLoanState
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     config: "<missing-value>",
     flash_loan: "<missing-value>"
   }
@@ -254,7 +254,7 @@ module mock_arb {
     config: Config
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     config: "<missing-value>"
   }
 
@@ -389,7 +389,7 @@ module proxy {
     config: Config
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     config: "<missing-value>"
   }
 

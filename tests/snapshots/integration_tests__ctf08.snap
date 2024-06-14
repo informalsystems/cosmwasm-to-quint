@@ -153,7 +153,7 @@ module oaksecurity_cosmwasm_ctf_08 {
     operations: Operations
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     config: { nft_contract: "s1" },
     sales: Map(),
     trades: Map(),

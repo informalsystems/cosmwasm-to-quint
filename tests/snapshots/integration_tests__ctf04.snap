@@ -77,7 +77,7 @@ module oaksecurity_cosmwasm_ctf_04 {
     balances: Addr -> Balance
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     config: { total_supply: 0 },
     balances: Map()
   }

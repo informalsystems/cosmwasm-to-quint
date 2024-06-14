@@ -126,6 +126,10 @@ pub fn init_value_for_type(ctx: &Context, ty: String) -> String {
         return "[]".to_string();
     }
 
+    if ty.starts_with("Option") {
+        return "None".to_string();
+    }
+
     let typ = ty.split('[').next().unwrap();
     if ctx.structs.contains_key(typ) {
         // Type is a struct, initialize fields recursively
@@ -196,7 +200,7 @@ pub fn post_items(ctx: &Context) -> String {
     {contract_state}
   }}
 
-  pure val init_contract_state = {{
+  pure val init_contract_state: ContractState = {{
     {initializer}
   }}
 

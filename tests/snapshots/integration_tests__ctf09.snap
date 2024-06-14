@@ -108,7 +108,7 @@ module oaksecurity_cosmwasm_ctf_09 {
     users: Addr -> UserRewardInfo
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     state: { owner: "s1", total_staked: 0, global_index: 0 },
     users: Map()
   }

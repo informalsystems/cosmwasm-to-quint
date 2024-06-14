@@ -137,8 +137,8 @@ module oaksecurity_cosmwasm_ctf_05 {
     balances: Addr -> int
   }
 
-  pure val init_contract_state = {
-    state: { current_owner: "s1", proposed_owner: "<missing-value>" },
+  pure val init_contract_state: ContractState = {
+    state: { current_owner: "s1", proposed_owner: None },
     balances: Map()
   }
 

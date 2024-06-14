@@ -106,7 +106,7 @@ module oaksecurity_cosmwasm_ctf_02 {
     voting_power: Addr -> UserInfo
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     voting_power: Map()
   }
 

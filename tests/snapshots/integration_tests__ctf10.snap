@@ -67,7 +67,7 @@ module oaksecurity_cosmwasm_ctf_10 {
     whitelist: Whitelist
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     config: { nft_contract: "s1", mint_per_user: 0, total_tokens: 0 },
     whitelist: { users: [] }
   }
