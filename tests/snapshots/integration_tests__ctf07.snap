@@ -95,7 +95,7 @@ module oaksecurity_cosmwasm_ctf_07 {
   action owner_action_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message_msg: CosmosMsg = <missing-nondet-value>.oneOf()
+    nondet message_msg: CosmosMsg = "<missing-nondet-value>".oneOf()
     pure val message: ExecuteMsg = ExecuteMsg_OwnerAction({ msg: message_msg })
     execute_message(message, max_funds)
   }
@@ -108,7 +108,7 @@ module oaksecurity_cosmwasm_ctf_07 {
     balances: Addr -> int
   }
 
-  pure val init_contract_state = {
+  pure val init_contract_state: ContractState = {
     top_depositor: "s1",
     owner: "s1",
     threshold: 0,
@@ -130,7 +130,7 @@ module oaksecurity_cosmwasm_ctf_07 {
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
 
-  val env_val = { block: { time: time } }
+  val env_val = { block: { time: time, height: 1 } } // TODO: Add a height var if you need it
 
   action init = {
     // TODO: Change next line according to fund expectations
@@ -142,8 +142,8 @@ module oaksecurity_cosmwasm_ctf_07 {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = { owner: "",threshold: 0 }
-    pure val r = instantiate(init_contract_state, { block: { time: 0 } }, info, message)
+    pure val message: InstantiateMsg = { owner: "", threshold: 0 }
+    pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {
       contract_state' = r._2,

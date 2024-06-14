@@ -4,6 +4,19 @@
 module cw_utils {
   import cw_types.* from "./cw_types"
 
+  type Expiration =
+    // AtHeight will expire when `env.block.height` >= height
+    | Expiration_AtHeight(int)
+    // AtTime will expire when `env.block.time` >= time
+    | Expiration_AtTime(int)
+    // Never will never expire. Used to express the empty variant
+    | Expiration_Never
+
+  type Duration =
+    | Duration_Height(int)
+    // Time in seconds
+    | Duration_Time(int)
+
   def one_coin(info: MessageInfo): Result[Coin, ContractError] = {
     if (info.funds.indices().size() == 0) {
       Err("No funds")

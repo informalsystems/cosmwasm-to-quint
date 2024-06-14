@@ -87,7 +87,7 @@ pub fn initializers(ctx: &Context) -> String {
         "
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
 
-  val env_val = {{ block: {{ time: time }} }}
+  val env_val = {{ block: {{ time: time, height: 1 }} }} // TODO: Add a height var if you need it
 
   action init = {{
     // TODO: Change next line according to fund expectations
@@ -100,7 +100,7 @@ pub fn initializers(ctx: &Context) -> String {
     val info = {{ sender: sender, funds: funds }}
 
     pure val message: InstantiateMsg = {}
-    pure val r = instantiate(init_contract_state, {{ block: {{ time: 0 }} }}, info, message)
+    pure val r = instantiate(init_contract_state, {{ block: {{ time: 0, height: 1 }} }}, info, message)
 
     all {{
       contract_state' = r._2,
@@ -126,9 +126,14 @@ pub fn init_value_for_type(ctx: &Context, ty: String) -> String {
         return "[]".to_string();
     }
 
-    if ctx.structs.contains_key(&ty) {
+    if ty.starts_with("Option") {
+        return "None".to_string();
+    }
+
+    let typ = ty.split('[').next().unwrap();
+    if ctx.structs.contains_key(typ) {
         // Type is a struct, initialize fields recursively
-        let fields = ctx.structs.get(&ty).unwrap();
+        let fields = ctx.structs.get(typ).unwrap();
         let struct_value = fields
             .iter()
             .map(|field| {
@@ -139,17 +144,17 @@ pub fn init_value_for_type(ctx: &Context, ty: String) -> String {
                 )
             })
             .collect_vec()
-            .join(",");
+            .join(", ");
         return format!("{{ {} }}", struct_value);
     }
 
-    match ty.as_str() {
+    match typ {
         "str" => "\"\"".to_string(),
         "int" => "0".to_string(),
         "Addr" => "\"s1\"".to_string(),
         _ => {
             eprintln!("No init value for type: {ty}");
-            "<missing-type>".to_string()
+            "\"<missing-value>\"".to_string()
         }
     }
 }
@@ -195,7 +200,7 @@ pub fn post_items(ctx: &Context) -> String {
     {contract_state}
   }}
 
-  pure val init_contract_state = {{
+  pure val init_contract_state: ContractState = {{
     {initializer}
   }}
 

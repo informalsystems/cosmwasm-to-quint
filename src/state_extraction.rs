@@ -1,7 +1,9 @@
 use itertools::Itertools;
+use regex::Regex;
 use rustc_span::{symbol::Ident, Symbol};
 
 use crate::{translate::Translatable, types::Context};
+extern crate regex;
 
 // State extraction is the only place where we need to deal with
 // rustc_middle::ty::Ty. This is the type given by typeck, which is the only way
@@ -11,19 +13,30 @@ use crate::{translate::Translatable, types::Context};
 impl Translatable for rustc_middle::ty::Ty<'_> {
     fn translate(&self, ctx: &mut Context) -> String {
         // FIXME: This should be quite unstable, but I couldn't figure out how to navigate `ty` here
+
         let var_name = &format!("{:#?}", self);
-        let name = var_name
-            .split("::")
-            .last()
-            .unwrap()
+        let name_core = var_name
+            .clone()
             .split(' ')
             .last()
             .unwrap()
             .split(')')
             .next()
-            .unwrap();
+            .unwrap()
+            .to_string();
 
-        Ident::with_dummy_span(Symbol::intern(name)).translate(ctx)
+        // The name_core can look like namespace::namespace::type<namespace::namespace::type_arg>
+        // The following regex replacement has the goal of transforming it into type<type_arg>
+        let re = Regex::new(r"(\w+::)*(\w+)(<(\w+::)*(\w+)>)?").unwrap();
+        let name = re.replace(name_core.as_str(), |caps: &regex::Captures| {
+            if let Some(m) = caps.get(5) {
+                format!("{}[{}]", &caps[2], m.as_str())
+            } else {
+                caps[2].to_string()
+            }
+        });
+
+        Ident::with_dummy_span(Symbol::intern(name.to_string().as_str())).translate(ctx)
     }
 }
 impl Translatable for rustc_middle::ty::GenericArg<'_> {

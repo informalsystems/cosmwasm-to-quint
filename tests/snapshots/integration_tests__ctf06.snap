@@ -35,7 +35,7 @@ module oaksecurity_cosmwasm_ctf_06 {
   type ExecuteMsg =
     | ExecuteMsg_Propose
     | ExecuteMsg_ResolveProposal
-    | ExecuteMsg_OwnerAction({ action: CosmosMsg })
+    | ExecuteMsg_OwnerAction({ action_: CosmosMsg })
     | ExecuteMsg_Receive(Cw20ReceiveMsg)
   type Cw20HookMsg =
     | Cw20HookMsg_CastVote
@@ -47,7 +47,7 @@ module oaksecurity_cosmwasm_ctf_06 {
   pure def execute(state: ContractState, env: Env, info: MessageInfo, msg: ExecuteMsg): (Result[Response, ContractError], ContractState) = match msg {
     | ExecuteMsg_Propose(__r) => propose(state, env, info)
     | ExecuteMsg_ResolveProposal(__r) => resolve_proposal(state, env, info)
-    | ExecuteMsg_OwnerAction(__r) => owner_action(state, info, __r.action)
+    | ExecuteMsg_OwnerAction(__r) => owner_action(state, info, __r.action_)
     | ExecuteMsg_Receive(msg) => receive_cw20(state, env, info, msg)
   }
 
@@ -98,8 +98,8 @@ module oaksecurity_cosmwasm_ctf_06 {
   action owner_action_action = {
     // TODO: Change next line according to fund expectations
     pure val max_funds = MAX_AMOUNT
-    nondet message_action: CosmosMsg = <missing-nondet-value>.oneOf()
-    pure val message: ExecuteMsg = ExecuteMsg_OwnerAction({ action: message_action })
+    nondet message_action_: CosmosMsg = "<missing-nondet-value>".oneOf()
+    pure val message: ExecuteMsg = ExecuteMsg_OwnerAction({ action_: message_action_ })
     execute_message(message, max_funds)
   }
   pure val DENOM = "uawesome"
@@ -109,9 +109,9 @@ module oaksecurity_cosmwasm_ctf_06 {
     proposal: Proposal
   }
 
-  pure val init_contract_state = {
-    config: { voting_window: 0,voting_token: "s1",owner: "s1" },
-    proposal: { proposer: "s1",timestamp: 0 }
+  pure val init_contract_state: ContractState = {
+    config: { voting_window: 0, voting_token: "s1", owner: "s1" },
+    proposal: { proposer: "s1", timestamp: 0 }
   }
 
   action execute_step = all {
@@ -129,7 +129,7 @@ module oaksecurity_cosmwasm_ctf_06 {
 
   pure val init_bank_state = ADDRESSES.mapBy(_ => DENOMS.mapBy(_ => MAX_AMOUNT))
 
-  val env_val = { block: { time: time } }
+  val env_val = { block: { time: time, height: 1 } } // TODO: Add a height var if you need it
 
   action init = {
     // TODO: Change next line according to fund expectations
@@ -141,8 +141,8 @@ module oaksecurity_cosmwasm_ctf_06 {
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    pure val message: InstantiateMsg = { token: "",owner: "",window: 0 }
-    pure val r = instantiate(init_contract_state, { block: { time: 0 } }, info, message)
+    pure val message: InstantiateMsg = { token: "", owner: "", window: 0 }
+    pure val r = instantiate(init_contract_state, { block: { time: 0, height: 1 } }, info, message)
 
     all {
       contract_state' = r._2,
@@ -245,7 +245,7 @@ pub mod state_structs {
         pub amount: Option<BigInt>,
         
         #[serde(with = "As::<de::Option::<_>>")]
-        pub message_action: Option<CosmosMsg>
+        pub message_action_: Option<CosmosMsg>
     }
     
     #[derive(Clone, Debug, Deserialize)]
@@ -444,8 +444,8 @@ pub mod tests {
                     let sender = Addr::unchecked(sender.unwrap());
                     let funds = funds_from_trace(amount, denom);
 
-                    let message_action = nondet_picks.message_action.clone().unwrap();
-                    let msg = ExecuteMsg::OwnerAction { action: message_action };
+                    let message_action_ = nondet_picks.message_action_.clone().unwrap();
+                    let msg = ExecuteMsg::OwnerAction { action_: message_action_ };
                     println!("Message: {:?}", msg);
                     println!("Sender: {:?}", sender);
                     println!("Funds: {:?}", funds);
