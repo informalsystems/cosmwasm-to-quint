@@ -48,8 +48,8 @@ impl Translatable for Ident {
             "Timestamp" => "int",
             "Deps" => "ContractState",
             "DepsMut" => "ContractStateMut", // Not an actual translation, but a placeholder
-            "deps" => "state",
-            "_deps" => "state",
+            "deps" => "state, deps",
+            "_deps" => "state, deps",
             s if QUINT_KEYWORDS.contains(&s) => name_with_underscore.as_str(),
             s if ctx.generics.contains(&s.to_string()) => lowercase_name.as_str(),
             s => s,
@@ -465,12 +465,13 @@ impl Translatable for Function<'_> {
             .map(|(input, param)| {
                 let translated_param = param.translate(ctx);
                 let translated_type = input.translate(ctx);
+
                 if translated_type == "ContractStateMut" {
                     has_mutability = true;
-                    return "state: ContractState".to_string();
+                    return "state: ContractState, deps: Deps".to_string();
                 }
                 if translated_type == "ContractState" {
-                    return "state: ContractState".to_string();
+                    return "state: ContractState, deps: Deps".to_string();
                 }
                 format!("{}: {}", translated_param, translated_type)
             })

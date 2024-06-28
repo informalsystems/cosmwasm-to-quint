@@ -127,10 +127,16 @@ module cw_types {
 
   type Result[ok, err] = Ok(ok) | Err(err)
 
+  type Querier = { bank: Addr -> Denom -> int }
+
+  pure def query_balance(querier: Querier, address: Addr, denom: Denom): Coin = {
+    { amount: querier.bank.get(address).get(denom), denom: denom }
+  }
+
   type Deps = {
     storage: TODO,
     api: TODO,
-    querier: TODO,
+    querier: Querier,
   }
 
   type BlockInfo = { time: int, height: int }
@@ -153,7 +159,7 @@ module cw_types {
 
   // These shouldn't be actually used, but they are here for completion
   type MultiIndex[ik, t, pk] = ()
-  type IndexedMap[k, t i] = ()
+  type IndexedMap[k, t, i] = ()
 
   type StdError = str
   type StdResult[a] = Result[a, StdError]

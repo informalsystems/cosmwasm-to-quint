@@ -19,7 +19,7 @@ module bank {
     }
   }
 
-  pure def query_balance(bank: Bank, address: Addr, denom: Denom): Coin = {
+  pure def balance(bank: Bank, address: Addr, denom: Denom): Coin = {
     { amount: bank.get(address).get(denom), denom: denom }
   }
 }

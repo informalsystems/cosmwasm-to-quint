@@ -28,6 +28,12 @@ pub const VALUES: &str = "
 ";
 
 pub const ACTIONS: &str = "
+  pure def deps_val(bank_state) = {
+    storage: \"TODO\",
+    api: \"TODO\",
+    querier: { bank: bank_state }
+  }
+
   action execute_message(message, max_funds) = {
     nondet sender = ADDRESSES.oneOf()
     nondet denom = DENOMS.oneOf()
@@ -35,12 +41,15 @@ pub const ACTIONS: &str = "
     val funds = [{ denom: denom, amount: amount }]
     val info = { sender: sender, funds: funds }
 
-    val r = execute(contract_state, env_val, info, message)
+    val bank_state = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
+                         .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount))
+
+    val r = execute(contract_state, deps_val(bank_state), env_val, info, message)
     all {
+      r._1 != Err(\"panic\"),
       bank.get(sender).get(denom) >= amount,
       match r._1 {
-        | Ok(_) => bank' = bank.setBy(sender, balances => balances.setBy(denom, balance => balance - amount))
-                               .setBy(CONTRACT_ADDRESS, balances => balances.setBy(denom, balance => balance + amount))
+        | Ok(_) => bank' = bank_state
         | Err(_) => bank' = bank
       },
       result' = r._1,
@@ -100,7 +109,7 @@ pub fn initializers(ctx: &Context) -> String {
     val info = {{ sender: sender, funds: funds }}
 
     pure val message: InstantiateMsg = {}
-    pure val r = instantiate(init_contract_state, {{ block: {{ time: 0, height: 1 }} }}, info, message)
+    pure val r = instantiate(init_contract_state, deps_val(init_bank_state), {{ block: {{ time: 0, height: 1 }} }}, info, message)
 
     all {{
       contract_state' = r._2,
@@ -152,9 +161,10 @@ pub fn init_value_for_type(ctx: &Context, ty: String) -> String {
         "str" => "\"\"".to_string(),
         "int" => "0".to_string(),
         "Addr" => "\"s1\"".to_string(),
+        "Duration" => "Duration_Time(0)".to_string(),
         _ => {
             eprintln!("No init value for type: {ty}");
-            "\"<missing-value>\"".to_string()
+            "missing_value".to_string()
         }
     }
 }
